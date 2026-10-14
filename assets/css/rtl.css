@@ -1,0 +1,180 @@
+/* rtl.css — 阿拉伯语 RTL 修正(html[dir=rtl]) */
+/* 基础方向:html 已由 language_attributes() 输出 dir="rtl",flex/grid 主轴向自动镜像,
+   这里只修显式写死 left/right/text-align 的部件。 */
+
+html[dir="rtl"] body {
+	text-align: right;
+	unicode-bidi: embed;
+}
+
+/* 顶部红条 */
+html[dir="rtl"] .topbar .container,
+html[dir="rtl"] .copy .container {
+	justify-content: flex-start;
+}
+
+/* 头部:logo 在最右,hdr 各元素顺序镜像 */
+html[dir="rtl"] .hdr {
+	flex-direction: row;
+}
+
+/* 面包屑分隔符在 RTL 下应反向(‹ 代替 / 的方向感),此处仅保证间距 */
+html[dir="rtl"] .breadcrumbs__sep {
+	display: inline-block;
+	transform: scaleX(-1);
+}
+
+/* 页面内 .crumb (Home › 标题)只镜像分隔符 <span>，最后一个 span 是当前页标题文本，
+   镜像会把阿拉伯语文字反写，故用 :not(:last-child) 排除。 */
+html[dir="rtl"] .crumb span:not(:last-child) {
+	display: inline-block;
+	transform: scaleX(-1);
+}
+
+/* 标题强调词 <em> 在 RTL 中保持斜体即可,无需特殊处理 */
+
+/* 首页 Hero:文案右对齐 */
+html[dir="rtl"] .hero-copy,
+html[dir="rtl"] .hero-copy p,
+html[dir="rtl"] .hero-copy h1 {
+	text-align: right;
+}
+
+/* 卡片文本右对齐 */
+html[dir="rtl"] .prod-grid h3,
+html[dir="rtl"] .sol-card h3,
+html[dir="rtl"] .sol-card p {
+	text-align: right;
+}
+
+/* 产品详情页:spec 表格首列右对齐,数值列保持 LTR 数字方向 */
+html[dir="rtl"] .product-table-style2 td,
+html[dir="rtl"] .product-table-style2 th {
+	text-align: right;
+}
+
+/* spec 表格边框镜像:源 p4.css 显式 border-right → RTL 换到左边,
+   否则表格纵向分隔线会贴在错误一侧。 */
+html[dir="rtl"] .product-table-style2 th,
+html[dir="rtl"] .product-table-style2 td {
+	border-right: 0;
+	border-left: 1px solid var(--ew-border);
+}
+html[dir="rtl"] .product-table-style2 th:last-child,
+html[dir="rtl"] .product-table-style2 td:last-child {
+	border-left: 0;
+}
+
+html[dir="rtl"] .product-table-style2 td {
+	direction: ltr;
+	unicode-bidi: plaintext;
+}
+
+/* 询盘表单:label 右对齐 */
+html[dir="rtl"] .inquiry-form label,
+html[dir="rtl"] form label {
+	text-align: right;
+}
+
+html[dir="rtl"] .inquiry-form input[type="text"],
+html[dir="rtl"] .inquiry-form input[type="email"],
+html[dir="rtl"] .inquiry-form textarea,
+html[dir="rtl"] form input[type="text"],
+html[dir="rtl"] form input[type="email"],
+html[dir="rtl"] form textarea {
+	text-align: right;
+}
+
+/* 语言切换器菜单已由 lang-switcher.css 的 [dir=rtl] 规则处理 */
+
+/* 页脚列文本右对齐 */
+html[dir="rtl"] .foot-col,
+html[dir="rtl"] .foot-col h4,
+html[dir="rtl"] .foot-col ul {
+	text-align: right;
+}
+
+/* 通用:数字/型号保持 LTR 方向,避免阿拉伯语混排错乱 */
+html[dir="rtl"] .model,
+html[dir="rtl"] .sku,
+html[dir="rtl"] [data-model] {
+	direction: ltr;
+	unicode-bidi: embed;
+	display: inline-block;
+}
+
+/* ================================================================
+   RTL 深度审计修正(2026-08-13)
+   源规则在 main.css / p4.css 中显式写死 left/padding-left,
+   RTL 下应镜像到右,否则下拉/缩进/圆点错边。
+   ================================================================ */
+
+/* 1) 桌面导航下拉(Products > 分类)。源:main.css .hdr-nav left:0
+      → 锚右:下拉从 li 右缘向右展开,mega 820px 向左延伸不溢出右缘 */
+html[dir="rtl"] .hdr-nav .sub-menu {
+	left: auto;
+	right: 0;
+}
+
+/* 2) 移动导航子菜单缩进。源:main.css:119,123 padding-left → padding-right */
+html[dir="rtl"] .mobile-nav-menu .sub-menu {
+	padding: 0 16px 0 0;
+}
+html[dir="rtl"] .mobile-nav-menu .sub-menu .sub-menu {
+	padding-left: 0;
+	padding-right: 14px;
+}
+
+/* 3) 产品页"应用场景"列表。源:main.css:327 padding-left:20px */
+html[dir="rtl"] .product-applications__content ul {
+	padding-left: 0;
+	padding-right: 20px;
+}
+
+/* 4) 新闻详情页文章列表。源:main.css:343 padding-left:22px */
+html[dir="rtl"] .single-article__content ul {
+	padding-left: 0;
+	padding-right: 22px;
+}
+
+/* 5) 页脚分类下的产品系列缩进。源:main.css:377 padding-left:14px */
+html[dir="rtl"] .foot .foot-sub {
+	padding-left: 0;
+	padding-right: 14px;
+}
+
+/* 6) 侧栏子分类缩进。源:p4.css:59 padding:12px 0 0 16px */
+html[dir="rtl"] .sb-sub {
+	padding: 12px 16px 0 0;
+}
+
+/* 7) 场景页指南列表/步骤。源:p4.css:248-253 left/padding-left */
+html[dir="rtl"] .scen-guide__list li {
+	padding: 7px 26px 7px 0;
+}
+html[dir="rtl"] .scen-guide__list li::before {
+	left: auto;
+	right: 4px;
+}
+html[dir="rtl"] .scen-guide__steps li {
+	padding: 8px 40px 8px 0;
+}
+html[dir="rtl"] .scen-guide__steps li::before {
+	left: auto;
+	right: 0;
+}
+
+/* 有意保留不改(低风险,常见 RTL 惯例):
+   .fab 悬浮客服右下 / .lightbox-close 右上关闭
+   .sb-menu a .n 计数右浮 / .sb-menu li.has-sub>a 箭头在右 —— 侧栏本身在右侧,箭头居右符合直觉 */
+
+/* 8) 产品指南 banner + 分类页 Related Guides 强调条。源:main.css:546,559 显式 border-left
+      → RTL 下换到右边(阅读起点一侧),与 spec 表格镜像惯例一致。 */
+html[dir="rtl"] .product-guide-banner {
+	border-left: 0;
+	border-right: 4px solid var(--primary);
+}
+html[dir="rtl"] .cat-guides__item {
+	border-left: 0;
+	border-right: 3px solid var(--primary);
+}

@@ -1,0 +1,105 @@
+@charset "UTF-8";
+/* ==========================================================================
+   redesign.css — 补齐「模板引用了、但全站 CSS 里零规则」的 class
+   --------------------------------------------------------------------------
+   规则：本文件**只新增**，不覆盖任何既有选择器。
+   已确认零规则（grep main.css / p4.css / lang-switcher.css / rtl.css）：
+     .btn--primary（独立使用，不含 .filter-bar 上下文）
+     .page-title  .page-header
+     .section__title  .section__subtitle
+     .products-empty  .faq-empty
+     .faq-archive-header__title/__intro  .faq-group__title
+     .faq-header  .faq-header__title  .faq-content
+     .faq-nav  .faq-nav__link  .faq-related
+     .faq-category-header  .faq-category-header__title/__desc
+     .faq-inquiry-cta  .faq-list__link  .faq-list__excerpt
+   反向确认（已有规则，本文件**不得**重复定义）：
+     .faq-list  .faq-list__item  .faq-list__q  .faq-list__a  .faq-group  .faq-group__desc
+     .sec-title  .sec-sub  .filter-bar  .download-*  .pagination  .breadcrumbs
+
+   依赖 main.css :root 的既有 token（--primary/--primary-dark/--text/--muted/--line/
+   --radius/--bg）。P2 起这些名字会被改写成 tokens.css 的别名映射，
+   本文件无需再改即自动跟随新配色。
+   ========================================================================== */
+
+/* ---------- 1. 主按钮 -------------------------------------------------
+   .btn 基类（main.css:178）不含 padding，且 .btn--primary 从无定义：
+   404.php:7 与 page-downloads.php:47/50 的红色主按钮此前是无内边距的色条。 */
+.btn--primary{background:var(--primary);color:#fff;border:1px solid var(--primary)}
+.btn--primary:not(.btn--sm){padding:13px 26px}
+.btn--primary:hover{background:var(--primary-dark);border-color:var(--primary-dark);color:#fff}
+.btn--primary:focus-visible{outline:2px solid var(--primary-dark);outline-offset:2px}
+
+/* ---------- 2. 内页标题 ----------------------------------------------
+   .page-title 在 4 个模板里独立出现（taxonomy-product_category:6 / index:10 /
+   search:6 / page-downloads:6），只有 page-downloads 套了 .page-header。
+   因此 .page-title 必须单独成立（深字浅底），.page-header 只做节奏带。 */
+.page-title{font-size:var(--fs-4xl);line-height:1.25;font-weight:700;color:var(--text);
+	letter-spacing:-.01em;margin:0 0 10px}
+.page-title span{color:var(--muted);font-weight:600}
+.page-header{padding:26px 0 20px;border-bottom:1px solid var(--line);margin-bottom:26px}
+.page-header .page-title{margin-bottom:0}
+
+/* ---------- 3. FAQ / 通用 section 标题 --------------------------------
+   与既有 .sec-title/.sec-sub 并列的第二套（FAQ 三模板在用） */
+.section__title{font-size:var(--fs-3xl);line-height:1.3;font-weight:700;color:var(--text);
+	text-align:center;margin:0 0 10px}
+.section__subtitle{text-align:center;color:var(--muted);font-size:var(--fs-md);line-height:1.75;
+	max-width:720px;margin:0 auto 28px}
+.faq-inquiry-cta{margin-top:48px;border-top:1px solid var(--line)}
+
+/* ---------- 4. FAQ 归档页头（archive-faq.php） ------------------------ */
+.faq-archive-header{padding:6px 0 22px;border-bottom:1px solid var(--line);margin-bottom:32px}
+.faq-archive-header__title{font-size:var(--fs-4xl);line-height:1.25;font-weight:700;color:var(--text);
+	letter-spacing:-.01em;margin:0 0 10px}
+.faq-archive-header__intro{color:var(--muted);font-size:var(--fs-md);line-height:1.75;
+	max-width:760px;margin:0}
+
+/* ---------- 5. FAQ 分组标题（archive-faq.php） ------------------------
+   .faq-group__desc / .faq-group + .faq-group 已在 p4.css:371-372，勿重复 */
+.faq-group__title{font-size:var(--fs-2xl);line-height:1.35;font-weight:700;color:var(--text);margin:0 0 8px}
+.faq-group__title a{color:inherit;text-decoration:none}
+.faq-group__title a:hover{color:var(--primary)}
+/* .faq-group 的规则全在 p4.css（scroll-margin-top / padding:0 / 组间距），此处不重复定义。 */
+
+/* ---------- 6. FAQ 单页（single-faq.php） ----------------------------- */
+.faq-header,.faq-category-header{padding:6px 0 20px;border-bottom:1px solid var(--line);
+	margin-bottom:26px}
+.faq-header__title,.faq-category-header__title{font-size:var(--fs-4xl);line-height:1.3;
+	font-weight:700;color:var(--text);letter-spacing:-.01em;margin:0 0 8px}
+.faq-header__title{margin-bottom:0}
+.faq-category-header__desc{color:var(--muted);font-size:var(--fs-md);line-height:1.75}
+.faq-category-header__desc p:last-child{margin-bottom:0}
+.faq-content{margin-bottom:34px}
+.faq-related{margin-top:40px}
+
+/* 上一则 / 下一则 */
+.faq-nav{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;
+	padding:18px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.faq-nav__link{display:inline-flex;align-items:center;gap:6px;max-width:100%;
+	font-size:var(--fs-base);font-weight:600;line-height:1.5;color:var(--primary);text-decoration:none}
+.faq-nav__link:hover{color:var(--primary-dark);text-decoration:underline}
+.faq-nav__link--next{margin-inline-start:auto;text-align:end}
+
+/* ---------- 7. FAQ 分类页列表项（taxonomy-faq_category.php） -----------
+   该模板用 __link/__excerpt，而非归档页的 __q/__a */
+.faq-list__link{display:block;font-size:var(--fs-lg);font-weight:700;line-height:1.45;
+	color:var(--text);text-decoration:none;margin:0 0 6px}
+.faq-list__link:hover{color:var(--primary);text-decoration:underline}
+.faq-list__excerpt{margin:0;color:var(--muted);font-size:var(--fs-base);line-height:1.7}
+
+/* ---------- 8. 空态 --------------------------------------------------- */
+.faq-empty,.products-empty{color:var(--muted);font-size:var(--fs-md);line-height:1.7;
+	padding:40px 0;text-align:center;margin:0}
+
+/* ---------- 响应式 ---------------------------------------------------- */
+@media(max-width:767px){
+	.page-title,.faq-archive-header__title,.faq-header__title,
+	.faq-category-header__title{font-size:var(--fs-3xl)}
+	.section__title{font-size:var(--fs-2xl)}
+	.faq-group__title{font-size:var(--fs-xl)}
+	.faq-header,.faq-category-header,.faq-archive-header{padding-bottom:16px;margin-bottom:20px}
+	.btn--primary:not(.btn--sm){padding:12px 22px}
+	.faq-nav__link{max-width:100%}
+	.faq-nav__link--next{margin-inline-start:0}
+}

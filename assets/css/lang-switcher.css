@@ -1,0 +1,103 @@
+/* Language switcher — 语言切换器(独立下拉,置于 hdr 搜索与 CTA 之间)
+   已 token 化：品牌红/白/中性灰/圆角/字号一律引用 tokens.css，
+   不再自带一套字面量（此前它是全站第三个 #DA2735 真值来源）。
+   仍为字面量的只有无法精确对应到 token 的输入框边框与悬停底色。 */
+.lang-switcher {
+	position: relative;
+	flex: 0 0 auto;
+}
+
+.lang-switcher__btn {
+	background: var(--c-surface);
+	border: 1px solid rgba(0, 0, 0, .14);
+	border-radius: var(--r-md);
+	padding: 7px 11px;
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-semibold);
+	letter-spacing: .04em;
+	color: var(--c-text-muted); /* 未 token 化：无精确对应值，P5 收敛中性阶时处理 */
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-family: inherit;
+	line-height: 1;
+	transition: border-color .2s, color .2s;
+}
+
+.lang-switcher__btn:hover,
+.lang-switcher.is-open .lang-switcher__btn {
+	border-color: var(--c-brand);
+	color: var(--c-brand);
+}
+
+.lang-switcher__caret {
+	width: 0;
+	height: 0;
+	border-left: 4px solid transparent;
+	border-right: 4px solid transparent;
+	border-top: 5px solid currentColor;
+	transition: transform .2s;
+}
+
+.lang-switcher.is-open .lang-switcher__caret {
+	transform: rotate(180deg);
+}
+
+.lang-switcher__menu {
+	position: absolute;
+	top: calc(100% + 8px);
+	right: 0;
+	left: auto;
+	z-index: 300;
+	min-width: 120px;
+	background: var(--c-surface);
+	border: 1px solid var(--c-line);
+	border-radius: var(--r-lg);
+	box-shadow: 0 10px 26px rgba(0, 0, 0, .12);
+	padding: 6px;
+	margin: 0;
+	list-style: none;
+	display: none;
+	text-align: left;
+}
+
+html[dir="rtl"] .lang-switcher__menu {
+	right: auto;
+	left: 0;
+	text-align: right;
+}
+
+.lang-switcher.is-open .lang-switcher__menu {
+	display: block;
+}
+
+.lang-switcher__item {
+	margin: 0;
+	padding: 0;
+}
+
+.lang-switcher__link {
+	display: block;
+	padding: 8px 10px;
+	border-radius: var(--r-md);
+	font-size: var(--fs-sm);
+	font-weight: var(--fw-semibold);
+	color: var(--c-text-muted);
+	text-decoration: none;
+}
+
+.lang-switcher__link:hover,
+.lang-switcher__link:focus-visible,
+.lang-switcher__link[aria-current="true"] {
+	background: #fff2f3;
+	color: var(--c-brand);
+}
+
+/* 移动端紧凑 */
+@media (max-width: 1024px) {
+	.lang-switcher__btn {
+		padding: 5px 9px;
+		font-size: var(--fs-2xs);
+	}
+}
