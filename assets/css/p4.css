@@ -639,3 +639,63 @@ body{font-size:var(--fs-lg)}
 	.region-item summary{font-size:var(--fs-lg);padding:16px 18px}
 	.region-item__body{padding:2px 18px 18px}
 }
+
+/* Contact banner: generated from the supplied product photographs. */
+.page-head--contact {
+    box-sizing: border-box;
+    min-height: clamp(340px, 21.68vw, 520px);
+    display: flex;
+    align-items: center;
+    padding: 52px 0;
+    background: #071426 url('../images/contact-products-banner.png') right center / auto 100% no-repeat;
+    border-bottom: 0;
+    color: #fff;
+}
+.page-head--contact > .container { width: 100%; }
+.page-head--contact .page-head__eyebrow {
+    color: #ffa6ae;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: .15em;
+    margin: 0 0 18px;
+}
+.page-head--contact h1 {
+    color: #fff;
+    font-size: clamp(40px, 4vw, 80px);
+    line-height: 1.1;
+    margin: 0;
+    max-width: 54%;
+}
+.page-head--contact .entry-content {
+    color: #c3c8d3;
+    max-width: 50%;
+    font-size: 17px;
+    line-height: 1.7;
+    margin-top: 22px;
+}
+.page-head--contact .certs { margin-top: 24px; }
+.page-head--contact .cert {
+    background: rgba(255,255,255,.12);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,.24);
+}
+@media (max-width: 767px) {
+    .page-head--contact {
+        min-height: 560px;
+        align-items: flex-start;
+        padding: 36px 0 260px;
+        background-size: auto 280px;
+        background-position: right bottom;
+    }
+    .page-head--contact h1,
+    .page-head--contact .entry-content { max-width: 100%; }
+    .page-head--contact .entry-content { font-size: 15px; margin-top: 16px; }
+    .page-head--contact .certs { margin-top: 18px; }
+    .page-head--contact .page-head__eyebrow { font-size: 12px; }
+}
+
+.page-head--contact::before,.page-head--contact::after{content:none}
+.page-head--contact > .container{max-width:1200px}
+
+.page-head--contact::before{content:"";background:linear-gradient(90deg,#071426 0%,rgba(7,20,38,.95) 23%,rgba(7,20,38,0) 55%)}
+@media(max-width:767px){.page-head--contact::before{content:none}}
