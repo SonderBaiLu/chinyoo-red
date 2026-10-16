@@ -38,10 +38,15 @@
         var $count = $('.ew-dropzone-count');
         function slotFor(name) {
             name = (name || '').replace(/\\/g, '/').split('/').pop();
-            if (name.indexOf('白底图') !== -1) return '主图';
-            if (name.indexOf('详细参数图') !== -1) return '详情';
-            var m = name.match(/展示图\s*(\d+)?/);
-            if (m) return '画廊' + (m[1] || '');
+            var base = name.replace(/\.[^.]+$/, '');
+            if (/白底图|底图|主图/.test(base)) return '主图';
+            if (/详细参数图|详细信息图|详细信息|详细页|详情图|详情|信息图|product[_\-]?detail/i.test(base)) {
+                if (/英文|english|(_|-)en($|版|\b)/i.test(base)) return '详情 EN';
+                if (/中文|chinese|(_|-)cn($|版|\b)/i.test(base)) return '详情 CN';
+                return '详情 EN/CN';
+            }
+            var m = base.match(/(展示图|轮播图|场景图|展示)\s*(\d+)?/);
+            if (m) return '画廊' + (m[2] || '');
             return '画廊';
         }
         function render() {
@@ -70,22 +75,47 @@
     function setupGridSearch() {
         var $search = $('#ew-product-search');
         if (!$search.length) return;
-        var $cards = $('#ew-product-grid .ew-product-card');
+        var $rows = $('#ew-product-grid').children();
         var $count = $('#ew-product-count');
         function filter() {
             var q = $.trim($search.val()).toLowerCase();
             var shown = 0;
-            $cards.each(function () {
-                var $c = $(this);
-                var hay = ((($c.data('name')) || '') + ' ' + ((($c.data('model')) || ''))).toLowerCase();
+            $rows.each(function () {
+                var $row = $(this);
+                var $card = $row.hasClass('ew-product-card') ? $row : $row.find('.ew-product-card').first();
+                var hay = ((($card.data('name')) || '') + ' ' + ((($card.data('model')) || ''))).toLowerCase();
                 var match = !q || hay.indexOf(q) !== -1;
-                $c.toggle(match);
+                $row.toggle(match);
                 if (match) shown++;
             });
-            if ($count.length) $count.text(shown + ' / ' + $cards.length);
+            if ($count.length) $count.text(shown + ' / ' + $rows.length);
         }
         $search.on('input', filter);
         filter();
+    }
+    function setupBulkDelete() {
+        var $list = $('.ew-studio-list');
+        if (!$list.length) return;
+        var $checks = $list.find('.ew-bulk-check');
+        var $all = $('#ew-select-all');
+        var $btn = $('#ew-bulk-delete');
+        function sync() {
+            var n = $checks.filter(':checked').length;
+            $btn.prop('disabled', n === 0);
+            $btn.html('<span class="dashicons dashicons-trash"></span>删除选中' + (n ? '（' + n + '）' : ''));
+            if ($all.length) { $all.prop('checked', n > 0 && n === $checks.length); $all.prop('indeterminate', n > 0 && n < $checks.length); }
+        }
+        if ($all.length) $all.on('change', function () { $checks.prop('checked', this.checked); sync(); });
+        $list.on('change', '.ew-bulk-check', sync);
+        $list.on('submit', function (e) {
+            var n = $checks.filter(':checked').length;
+            if (!n) { e.preventDefault(); return; }
+            var warn = '将永久删除选中的 ' + n + ' 个商品';
+            if ($list.find('[name="delete_translations"]').is(':checked')) warn += '及其它语言翻译';
+            if ($list.find('[name="delete_media"]').is(':checked')) warn += '和相关图片';
+            if (!window.confirm(warn + '，且不可恢复。确定继续？')) { e.preventDefault(); }
+        });
+        sync();
     }
     function initialize(root) {
         var $root = root ? $(root) : $(document);
@@ -105,6 +135,7 @@
         initialize();
         setupDropzone();
         setupGridSearch();
+        setupBulkDelete();
     });
     $(document).on('woocommerce_variations_loaded woocommerce_variations_added', function () { initialize(); });
     $(document).on('click', '.ew-variation-editor > summary, .ew-legacy-editor > summary', function () { initialize($(this).parent()); });
@@ -133,4 +164,7 @@
     $(document).on('click', '.ew-editor-add-spec', function () { var $section = $(this).closest('.ew-editor-specs'); $section.find('.ew-editor-spec-rows').append(specRow({})); syncSpecs($section); $section.find('.ew-spec-row:last .ew-spec-name').trigger('focus'); });
     $(document).on('input', '.ew-spec-name, .ew-spec-value', function () { syncSpecs($(this).closest('.ew-editor-specs')); });
     $(document).on('click', '.ew-spec-remove', function () { var $section = $(this).closest('.ew-editor-specs'); $(this).closest('.ew-spec-row').remove(); syncSpecs($section); });
+    $(document).on('click', '.ew-delete-button', function (e) {
+        if (!window.confirm('将永久删除这个商品（含其它语言翻译与图片附件），不可恢复。确定继续？')) { e.preventDefault(); }
+    });
 }(jQuery));

@@ -163,7 +163,7 @@
 			/* ----------------------------------------------------------
 			   3) Product gallery — keep thumbnail changes reliable even
 			   when the optional magnifier plugin is unavailable. Clicking
-			   the hero image opens a focused, keyboard-closeable lightbox.
+			   the hero image does nothing (no zoom / lightbox preview).
 			   ---------------------------------------------------------- */
 			$(document).on('click', '.product-gallery--premium .yith_magnifier_gallery a', function (e) {
 				e.preventDefault();
@@ -182,25 +182,6 @@
 
 			$(document).on('click', '.product-gallery--premium .woocommerce-main-image', function (e) {
 				e.preventDefault();
-				var src = $(this).attr('href') || $(this).find('img').attr('src');
-				if (!src) { return; }
-				var $overlay = $('.ew-product-lightbox');
-				if (!$overlay.length) {
-					$overlay = $('<div class="ew-product-lightbox" role="dialog" aria-modal="true" aria-label="Product image"><button type="button" class="ew-product-lightbox__close" aria-label="Close image">×</button><img alt=""></div>').appendTo('body');
-				}
-				$overlay.find('img').attr('src', src).attr('alt', $(this).find('img').attr('alt') || '');
-				$overlay.addClass('is-open');
-				$('body').addClass('ew-lightbox-open');
-				$overlay.find('.ew-product-lightbox__close').trigger('focus');
-			});
-
-			$(document).on('click', '.ew-product-lightbox, .ew-product-lightbox__close', function (e) {
-				if (e.target !== this && !$(e.target).hasClass('ew-product-lightbox__close')) { return; }
-				$('.ew-product-lightbox').removeClass('is-open');
-				$('body').removeClass('ew-lightbox-open');
-			});
-			$(document).on('keydown', function (e) {
-				if (e.key === 'Escape') { $('.ew-product-lightbox').removeClass('is-open'); $('body').removeClass('ew-lightbox-open'); }
 			});
 
 		/* ----------------------------------------------------------

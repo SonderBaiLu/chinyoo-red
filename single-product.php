@@ -103,7 +103,8 @@ function ew_get_model_detail_images( $model_id ) {
     }
 
     $lang = function_exists( 'pll_current_language' ) ? pll_current_language() : 'en';
-    $key  = ( 'zh' === $lang ) ? 'cn' : $lang;
+    // zh / zh-tw 等中文变体统一取 cn；其余语言取自身 key，缺失时回退 en。
+    $key  = in_array( $lang, array( 'zh', 'zh-tw', 'zh-hk', 'cn' ), true ) ? 'cn' : $lang;
     if ( ! empty( $map[ $key ] ) && is_array( $map[ $key ] ) ) {
         return array_values( array_filter( array_map( 'absint', $map[ $key ] ) ) );
     }

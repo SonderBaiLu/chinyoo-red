@@ -144,6 +144,65 @@ function ew_product_studio_new_url() {
     return add_query_arg( 'new', '1', ew_product_studio_url() );
 }
 
+/* ---------- 删除商品：清图片附件 + Polylang 翻译组 ---------- */
+function ew_product_delete_media( $id ) {
+    $att   = (array) get_children( array( 'post_parent' => $id, 'post_type' => 'attachment', 'posts_per_page' => -1, 'fields' => 'ids', 'post_status' => 'any' ) );
+    $thumb = (int) get_post_thumbnail_id( $id );
+    if ( $thumb ) { $att[] = $thumb; }
+    $att = array_merge( $att, ew_editor_images( get_post_meta( $id, '_model_gallery', true ) ) );
+    $details = ew_editor_array( get_post_meta( $id, '_model_detail_images', true ) );
+    foreach ( $details as $list ) {
+        if ( is_array( $list ) ) { $att = array_merge( $att, array_map( 'absint', $list ) ); }
+    }
+    foreach ( array_values( array_unique( array_filter( array_map( 'absint', $att ) ) ) ) as $aid ) {
+        if ( 'attachment' === get_post_type( $aid ) ) { wp_delete_attachment( $aid, true ); }
+    }
+}
+
+/* 删除一个商品（可选：连带图片附件、其它语言翻译）。返回实际删除的商品数。 */
+function ew_product_delete( $id, $delete_media = true, $delete_translations = true ) {
+    $id = absint( $id );
+    if ( ! $id || 'product' !== get_post_type( $id ) ) { return 0; }
+    $ids = array( $id );
+    if ( $delete_translations && function_exists( 'pll_get_post_translations' ) ) {
+        foreach ( (array) pll_get_post_translations( $id ) as $tid ) { $ids[] = (int) $tid; }
+    }
+    $n = 0;
+    foreach ( array_values( array_unique( array_filter( $ids ) ) ) as $pid ) {
+        if ( 'product' !== get_post_type( $pid ) ) { continue; }
+        if ( $delete_media ) { ew_product_delete_media( $pid ); }
+        wp_delete_post( $pid, true );
+        $n++;
+    }
+    return $n;
+}
+
+add_action( 'admin_post_ew_product_delete', function () {
+    $id = isset( $_POST['product_id'] ) ? absint( $_POST['product_id'] ) : 0;
+    if ( ! $id || 'product' !== get_post_type( $id ) || ! current_user_can( 'delete_post', $id ) ) { wp_die( '您没有权限删除这个商品。' ); }
+    check_admin_referer( 'ew_product_delete_' . $id, 'ew_delete_nonce' );
+    $del_tr    = ! isset( $_POST['delete_translations'] ) || ! empty( $_POST['delete_translations'] );
+    $del_media = ! isset( $_POST['delete_media'] ) || ! empty( $_POST['delete_media'] );
+    ew_product_delete( $id, $del_media, $del_tr );
+    wp_safe_redirect( add_query_arg( 'deleted', '1', ew_product_studio_url() ) );
+    exit;
+} );
+
+add_action( 'admin_post_ew_product_bulk_delete', function () {
+    if ( ! current_user_can( 'edit_products' ) ) { wp_die( '您没有权限。' ); }
+    check_admin_referer( 'ew_product_bulk_delete', 'ew_bulk_nonce' );
+    $ids = isset( $_POST['ids'] ) ? array_map( 'absint', (array) $_POST['ids'] ) : array();
+    $ids = array_values( array_filter( $ids ) );
+    $del_tr    = ! empty( $_POST['delete_translations'] );
+    $del_media = ! empty( $_POST['delete_media'] );
+    $n = 0;
+    foreach ( $ids as $id ) {
+        if ( current_user_can( 'delete_post', $id ) ) { $n += ew_product_delete( $id, $del_media, $del_tr ); }
+    }
+    wp_safe_redirect( add_query_arg( 'deleted', (string) $n, ew_product_studio_url() ) );
+    exit;
+} );
+
 add_action( 'admin_menu', function () {
     add_submenu_page( 'edit.php?post_type=product', '商品展示管理', '商品展示管理', 'edit_products', 'ew-product-studio', 'ew_render_product_studio' );
 }, 30 );
@@ -154,7 +213,7 @@ function ew_studio_form( $product_id, $values, $is_new = false ) {
     ?>
     <form class="ew-studio-form" method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
         <input type="hidden" name="action" value="ew_product_studio_save"><input type="hidden" name="product_id" value="<?php echo (int) $product_id; ?>"><?php wp_nonce_field( 'ew_product_studio_save_' . (int) $product_id, 'ew_studio_nonce' ); ?>
-        <div class="ew-studio-toolbar"><div><a href="<?php echo esc_url( ew_product_studio_url() ); ?>">← 返回商品列表</a><strong><?php echo esc_html( $values['title'] ?: ( $is_new ? '新建商品' : '(未命名)' ) ); ?></strong><span class="ew-status-badge<?php echo ( $is_new || 'publish' === $status ) ? ' is-publish' : ''; ?>"><?php echo $is_new ? '新商品' : ( 'publish' === $status ? '已发布' : esc_html( get_post_status_object( $status )->label ) ); ?></span></div><div><?php if ( $product_id ) : ?><a class="button" href="<?php echo esc_url( get_permalink( $product_id ) ); ?>" target="_blank">查看前台</a><?php endif; ?><button class="button button-primary ew-save-button"><span class="dashicons dashicons-saved"></span>保存</button></div></div>
+        <div class="ew-studio-toolbar"><div><a href="<?php echo esc_url( ew_product_studio_url() ); ?>">← 返回商品列表</a><strong><?php echo esc_html( $values['title'] ?: ( $is_new ? '新建商品' : '(未命名)' ) ); ?></strong><span class="ew-status-badge<?php echo ( $is_new || 'publish' === $status ) ? ' is-publish' : ''; ?>"><?php echo $is_new ? '新商品' : ( 'publish' === $status ? '已发布' : esc_html( get_post_status_object( $status )->label ) ); ?></span></div><div><?php if ( $product_id ) : ?><a class="button" href="<?php echo esc_url( get_permalink( $product_id ) ); ?>" target="_blank">查看前台</a><button type="submit" form="ew-delete-form" class="button ew-delete-button"><span class="dashicons dashicons-trash"></span>删除</button><?php endif; ?><button class="button button-primary ew-save-button"><span class="dashicons dashicons-saved"></span>保存</button></div></div>
         <section id="ew-studio-basic" class="ew-editor-panel ew-basic-panel">
             <div class="ew-panel-heading"><div><h3>基本资料</h3><p>保存后立即同步到前台。</p></div></div>
             <div class="ew-basic-grid">
@@ -178,6 +237,15 @@ function ew_studio_form( $product_id, $values, $is_new = false ) {
         <?php ew_model_editor( $product_id, 'studio' ); ?>
         <div class="ew-studio-savebar"><span>记得保存</span><button class="button button-primary ew-save-button"><span class="dashicons dashicons-saved"></span>保存</button></div>
     </form>
+    <?php if ( $product_id ) : ?>
+        <form id="ew-delete-form" class="ew-delete-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+            <input type="hidden" name="action" value="ew_product_delete">
+            <input type="hidden" name="product_id" value="<?php echo (int) $product_id; ?>">
+            <input type="hidden" name="delete_translations" value="1">
+            <input type="hidden" name="delete_media" value="1">
+            <?php wp_nonce_field( 'ew_product_delete_' . (int) $product_id, 'ew_delete_nonce' ); ?>
+        </form>
+    <?php endif; ?>
     <?php
 }
 
@@ -192,24 +260,36 @@ function ew_render_product_studio() {
     <div class="wrap ew-product-studio">
         <div class="ew-studio-hero"><div><span class="ew-studio-kicker">PRODUCT STUDIO</span><h1><?php echo $is_new ? '新建商品' : '商品展示管理'; ?></h1><p>在清爽的页面里维护前台商品的图片、参数和详情。</p></div><a class="button" href="<?php echo esc_url( ew_product_studio_new_url() ); ?>"><span class="dashicons dashicons-plus-alt2"></span>新增商品</a></div>
         <?php if ( isset( $_GET['saved'] ) ) : ?><div class="notice notice-success is-dismissible"><p><strong>已保存。</strong>前台页面已使用最新内容。</p></div><?php endif; ?>
+        <?php if ( isset( $_GET['deleted'] ) ) : ?><div class="notice notice-success is-dismissible"><p><strong>已删除 <?php echo (int) $_GET['deleted']; ?> 个商品</strong>（含图片附件与其它语言翻译，可在媒体库回收站恢复图片）。</p></div><?php endif; ?>
         <?php if ( $is_new ) : ?>
             <?php ew_studio_form( 0, array( 'title' => '', 'model' => '', 'status' => 'publish', 'excerpt' => '' ), true ); ?>
         <?php elseif ( ! $product ) : ?>
-            <div class="ew-studio-list">
+            <form class="ew-studio-list" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+                <input type="hidden" name="action" value="ew_product_bulk_delete">
+                <?php wp_nonce_field( 'ew_product_bulk_delete', 'ew_bulk_nonce' ); ?>
                 <div class="ew-studio-listbar">
                     <input type="search" id="ew-product-search" class="ew-product-search" placeholder="搜索型号 / 名称…">
                     <span class="ew-studio-count" id="ew-product-count"></span>
                 </div>
+                <div class="ew-bulk-bar">
+                    <label class="ew-bulk-selectall"><input type="checkbox" id="ew-select-all"> 全选本页</label>
+                    <label class="ew-bulk-opt"><input type="checkbox" name="delete_translations" value="1" checked> 同时删除其它语言翻译</label>
+                    <label class="ew-bulk-opt"><input type="checkbox" name="delete_media" value="1" checked> 同时删除图片附件</label>
+                    <button type="submit" class="button ew-bulk-delete" id="ew-bulk-delete" disabled><span class="dashicons dashicons-trash"></span>删除选中</button>
+                </div>
                 <div class="ew-product-grid" id="ew-product-grid">
                     <?php foreach ( $products as $item ) : $thumb = ew_studio_thumb( $item->ID ); $model = get_post_meta( $item->ID, 'product_model', true ); ?>
-                        <a class="ew-product-card" data-name="<?php echo esc_attr( $item->post_title ); ?>" data-model="<?php echo esc_attr( $model ); ?>" href="<?php echo esc_url( ew_product_studio_url( $item->ID ) ); ?>">
-                            <span class="ew-product-card__thumb"><?php echo $thumb ? wp_get_attachment_image( $thumb, 'thumbnail', false, array( 'loading' => 'lazy' ) ) : '<span class="dashicons dashicons-format-image ew-no-thumb"></span>'; ?></span>
-                            <span class="ew-product-card__body"><strong><?php echo esc_html( $item->post_title ?: '(未命名)' ); ?></strong><small><?php echo esc_html( $model ? $model : '#' . (int) $item->ID ); ?></small></span>
-                            <span class="ew-status-badge<?php echo 'publish' === $item->post_status ? ' is-publish' : ''; ?>"><?php echo 'publish' === $item->post_status ? '已发布' : esc_html( get_post_status_object( $item->post_status )->label ); ?></span>
-                        </a>
+                        <div class="ew-product-cell">
+                            <label class="ew-product-check" title="选择"><input type="checkbox" class="ew-bulk-check" name="ids[]" value="<?php echo (int) $item->ID; ?>"></label>
+                            <a class="ew-product-card" data-name="<?php echo esc_attr( $item->post_title ); ?>" data-model="<?php echo esc_attr( $model ); ?>" href="<?php echo esc_url( ew_product_studio_url( $item->ID ) ); ?>">
+                                <span class="ew-product-card__thumb"><?php echo $thumb ? wp_get_attachment_image( $thumb, 'thumbnail', false, array( 'loading' => 'lazy' ) ) : '<span class="dashicons dashicons-format-image ew-no-thumb"></span>'; ?></span>
+                                <span class="ew-product-card__body"><strong><?php echo esc_html( $item->post_title ?: '(未命名)' ); ?></strong><small><?php echo esc_html( $model ? $model : '#' . (int) $item->ID ); ?></small></span>
+                                <span class="ew-status-badge<?php echo 'publish' === $item->post_status ? ' is-publish' : ''; ?>"><?php echo 'publish' === $item->post_status ? '已发布' : esc_html( get_post_status_object( $item->post_status )->label ); ?></span>
+                            </a>
+                        </div>
                     <?php endforeach; ?>
                 </div>
-            </div>
+            </form>
         <?php else : ?>
             <?php ew_studio_form( $product_id, array( 'title' => $product->post_title, 'model' => get_post_meta( $product_id, 'product_model', true ), 'status' => $product->post_status, 'excerpt' => $product->post_excerpt ) ); ?>
         <?php endif; ?>
@@ -249,10 +329,10 @@ add_action( 'admin_post_ew_product_studio_save', function () {
             update_post_meta( $id, '_model_gallery', wp_slash( wp_json_encode( $gallery ) ) );
             set_post_thumbnail( $id, $imp['main'] ? $imp['main'] : $gallery[0] );
         }
-        if ( $imp['detail'] ) {
+        if ( ! empty( $imp['detail_en'] ) || ! empty( $imp['detail_cn'] ) ) {
             $details = ew_editor_array( get_post_meta( $id, '_model_detail_images', true ) );
-            $details['en'] = $imp['detail'];
-            $details['cn'] = $imp['detail'];
+            if ( ! empty( $imp['detail_en'] ) ) { $details['en'] = $imp['detail_en']; }
+            if ( ! empty( $imp['detail_cn'] ) ) { $details['cn'] = $imp['detail_cn']; }
             update_post_meta( $id, '_model_detail_images', wp_slash( wp_json_encode( $details, JSON_UNESCAPED_UNICODE ) ) );
         }
     }
