@@ -30,6 +30,63 @@
         $('<button type="button" class="ew-spec-remove" aria-label="删除参数"><span class="dashicons dashicons-trash"></span></button>').appendTo($row);
         return $row;
     }
+    function setupDropzone() {
+        var $dz = $('#ew-dropzone');
+        if (!$dz.length) return;
+        var $input = $dz.find('.ew-dropzone-input');
+        var $preview = $('.ew-dropzone-preview');
+        var $count = $('.ew-dropzone-count');
+        function slotFor(name) {
+            name = (name || '').replace(/\\/g, '/').split('/').pop();
+            if (name.indexOf('白底图') !== -1) return '主图';
+            if (name.indexOf('详细参数图') !== -1) return '详情';
+            var m = name.match(/展示图\s*(\d+)?/);
+            if (m) return '画廊' + (m[1] || '');
+            return '画廊';
+        }
+        function render() {
+            var files = $input[0] ? Array.prototype.slice.call($input[0].files) : [];
+            $preview.empty();
+            var n = 0;
+            files.forEach(function (f) {
+                if (!/\.(jpe?g|png|webp|gif)$/i.test(f.name)) return;
+                n++;
+                var $li = $('<li class="ew-dropzone-item">');
+                $('<span class="ew-dropzone-slot"></span>').text(slotFor(f.name)).appendTo($li);
+                $('<span class="ew-dropzone-name"></span>').text(f.name).appendTo($li);
+                $preview.append($li);
+            });
+            $count.text(n);
+            $preview.toggle(n > 0);
+        }
+        $input.on('change', render);
+        $dz.on('dragenter dragover', function (e) { e.preventDefault(); e.stopPropagation(); $dz.addClass('is-dragover'); });
+        $dz.on('dragleave drop', function (e) { e.preventDefault(); e.stopPropagation(); $dz.removeClass('is-dragover'); });
+        $dz.on('drop', function (e) {
+            var dt = e.originalEvent.dataTransfer;
+            if (dt && dt.files && dt.files.length) { $input[0].files = dt.files; render(); }
+        });
+    }
+    function setupGridSearch() {
+        var $search = $('#ew-product-search');
+        if (!$search.length) return;
+        var $cards = $('#ew-product-grid .ew-product-card');
+        var $count = $('#ew-product-count');
+        function filter() {
+            var q = $.trim($search.val()).toLowerCase();
+            var shown = 0;
+            $cards.each(function () {
+                var $c = $(this);
+                var hay = ((($c.data('name')) || '') + ' ' + ((($c.data('model')) || ''))).toLowerCase();
+                var match = !q || hay.indexOf(q) !== -1;
+                $c.toggle(match);
+                if (match) shown++;
+            });
+            if ($count.length) $count.text(shown + ' / ' + $cards.length);
+        }
+        $search.on('input', filter);
+        filter();
+    }
     function initialize(root) {
         var $root = root ? $(root) : $(document);
         $root.find('.ew-editor-images').each(function () {
@@ -46,8 +103,8 @@
     }
     $(function () {
         initialize();
-        if ($.fn.selectWoo) $('#ew-product-picker').selectWoo({ placeholder: '输入名称或 ID 搜索商品', allowClear: true, width: 'resolve' });
-        $('#ew-product-picker').on('change', function () { if ($(this).val()) $(this).closest('form').trigger('submit'); });
+        setupDropzone();
+        setupGridSearch();
     });
     $(document).on('woocommerce_variations_loaded woocommerce_variations_added', function () { initialize(); });
     $(document).on('click', '.ew-variation-editor > summary, .ew-legacy-editor > summary', function () { initialize($(this).parent()); });

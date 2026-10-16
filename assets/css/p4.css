@@ -586,3 +586,57 @@ body{font-size:var(--fs-lg)}
 	.pc-directory-shell .pitem__name{font-size:12px}
 	.pc-directory-shell .pitem__model{font-size:13px}
 }
+
+/* ================================================================
+   Contact 改版：How can we help you?（图1）+ Service/Repair（图2）
+   ================================================================ */
+.inner-page--contact .contact-help{padding:44px 0 8px}
+.inner-page--contact .contact-regions{padding:32px 0 8px}
+.contact-help__title{font-size:clamp(1.6rem,3.2vw,2.4rem);font-weight:700;color:var(--c-text-strong);text-align:center;margin:0 0 22px}
+.contact-regions__lead{text-align:center;color:var(--c-text-muted);font-size:var(--fs-base);margin:-12px 0 26px}
+.contact-help__cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+.help-card{position:relative;padding:30px 28px;border:1px solid var(--c-line);border-radius:var(--r-lg);background:#fff;box-shadow:0 12px 32px rgba(15,23,42,.06);transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
+.help-card:hover{transform:translateY(-3px);box-shadow:0 18px 42px rgba(15,23,42,.12);border-color:var(--c-brand)}
+.help-card__icon{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:14px;background:var(--c-brand-soft);color:var(--c-brand);font-size:24px;margin-bottom:16px}
+.help-card h3{margin:0 0 10px;font-size:var(--fs-xl);font-weight:700;color:var(--c-text-strong)}
+.help-card p{margin:0 0 12px;color:var(--c-text-muted);font-size:var(--fs-base);line-height:1.6}
+.help-card__line{margin:0 0 6px !important;font-size:var(--fs-base)}
+.help-card__line span{color:var(--c-text-muted);font-weight:600}
+.help-card__line a{color:var(--c-text-strong);font-weight:700}
+.help-card__link{display:inline-flex;align-items:center;gap:6px;color:var(--c-brand);font-weight:700}
+.help-card__link:hover{text-decoration:underline}
+.help-card__note{display:block;margin-top:8px;color:var(--c-text-muted);font-size:var(--fs-sm)}
+
+/* 区域折叠 (图2) */
+.region-accordion{max-width:860px;margin:0 auto;border:1px solid var(--c-line);border-radius:var(--r-lg);overflow:hidden;background:#fff}
+.region-item+.region-item{border-top:1px solid var(--c-line)}
+.region-item summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 24px;font-size:var(--fs-xl);font-weight:600;color:var(--c-text-strong);transition:color .2s ease,background .2s ease}
+.region-item summary::-webkit-details-marker{display:none}
+.region-item summary:hover{color:var(--c-brand);background:var(--c-brand-soft)}
+.region-item[open] summary{color:var(--c-brand)}
+.region-item__chev{flex:0 0 auto;width:10px;height:10px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);transition:transform .25s ease}
+.region-item[open] .region-item__chev{transform:rotate(-135deg)}
+.region-item__body{padding:4px 24px 22px;color:var(--c-text-muted);font-size:var(--fs-base);line-height:1.7}
+.region-item__body a{color:var(--c-brand);font-weight:600}
+.region-item__contact{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:8px}
+
+/* 四个标签按钮（图1） */
+.contact-tabs{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:0 0 28px}
+.contact-tab{padding:12px 24px;border:1.5px solid var(--c-line-strong);border-radius:var(--r-pill,999px);background:#fff;color:var(--c-text-strong);font-size:var(--fs-base);font-weight:700;letter-spacing:.02em;text-transform:uppercase;cursor:pointer;transition:color .2s ease,border-color .2s ease,background .2s ease,box-shadow .2s ease}
+.contact-tab:hover{border-color:var(--c-brand);color:var(--c-brand)}
+.contact-tab.is-active{background:var(--c-brand);border-color:var(--c-brand);color:#fff;box-shadow:0 6px 16px rgba(218,39,53,.28)}
+.contact-tab__panel{display:none}
+.contact-tab__panel.is-active{display:block;animation:ctab-fade .35s ease}
+@keyframes ctab-fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.ctab-form{max-width:760px;margin:26px auto 0}
+.ctab-form .inquiry-form{margin:0;max-width:none}
+
+@media(max-width:767px){
+	.inner-page--contact .contact-help{padding:32px 0 6px}
+	.contact-tabs{gap:8px}
+	.contact-tab{flex:1 1 auto;padding:11px 10px;font-size:var(--fs-sm);text-align:center}
+	.contact-help__cards{grid-template-columns:1fr}
+	.help-card{padding:24px 20px}
+	.region-item summary{font-size:var(--fs-lg);padding:16px 18px}
+	.region-item__body{padding:2px 18px 18px}
+}

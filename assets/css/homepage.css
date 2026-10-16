@@ -650,21 +650,63 @@
 	margin: 6px 0 0;
 }
 
+/* 醒目的胶囊按钮：渐变红底 + 投影 + 悬停高光扫过 + 呼吸光晕 */
 .home .sec-link {
 	flex: 0 0 auto;
+	position: relative;
 	display: inline-flex;
 	align-items: center;
-	gap: 6px;
+	gap: 8px;
 	margin-bottom: 4px;
-	color: var(--c-brand);
+	padding: 10px 22px;
+	color: #fff;
 	font-size: var(--fs-base);
 	font-weight: 700;
 	white-space: nowrap;
-	transition: transform .2s ease;
+	border-radius: var(--r-pill, 999px);
+	background: linear-gradient(135deg, var(--c-brand) 0%, var(--c-brand-dark) 100%);
+	box-shadow: 0 6px 18px rgba(218, 39, 53, .28);
+	overflow: hidden;
+	transition: transform .2s ease, box-shadow .2s ease;
+}
+
+/* 悬停时高光从左扫过 */
+.home .sec-link::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: -120%;
+	width: 60%;
+	height: 100%;
+	background: linear-gradient(120deg, transparent, rgba(255, 255, 255, .55), transparent);
+	transform: skewX(-20deg);
+	transition: left .55s ease;
+}
+
+/* 呼吸光晕，持续吸引注意 */
+.home .sec-link::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	animation: ew-sec-pulse 2.6s ease-out infinite;
+	pointer-events: none;
+}
+
+@keyframes ew-sec-pulse {
+	0% { box-shadow: 0 0 0 0 rgba(218, 39, 53, .45); }
+	70% { box-shadow: 0 0 0 10px rgba(218, 39, 53, 0); }
+	100% { box-shadow: 0 0 0 0 rgba(218, 39, 53, 0); }
 }
 
 .home .sec-link:hover {
-	text-decoration: underline;
+	text-decoration: none;
+	transform: translateY(-2px);
+	box-shadow: 0 12px 26px rgba(218, 39, 53, .4);
+}
+
+.home .sec-link:hover::before {
+	left: 130%;
 }
 
 .home .sec-link .sec-link__arrow {
@@ -672,7 +714,7 @@
 }
 
 .home .sec-link:hover .sec-link__arrow {
-	transform: translateX(3px);
+	transform: translateX(4px);
 }
 
 /* ===== Hero stats：紧凑数字信任条 ===== */
@@ -726,6 +768,82 @@
 
 .home .product-card__actions {
 	padding-top: 8px;
+}
+
+/* ===== Featured：PC 自动轮播（手机/平板仍是网格或原生滑动，箭头仅桌面出现） ===== */
+.featured-carousel {
+	position: relative;
+}
+
+.featured-carousel__nav {
+	display: none;
+}
+
+@media (min-width: 993px) {
+	.home .featured-carousel .prod-grid {
+		display: flex;
+		flex-wrap: nowrap;
+		gap: 14px;
+		overflow-x: auto;
+		scroll-snap-type: x mandatory;
+		scroll-behavior: smooth;
+		scrollbar-width: none;
+		-ms-overflow-style: none;
+	}
+
+	.home .featured-carousel .prod-grid::-webkit-scrollbar {
+		display: none;
+	}
+
+	/* 一屏 4 张（3 个 14px 间距）。 */
+	.home .featured-carousel .prod-grid > * {
+		flex: 0 0 calc((100% - 42px) / 4);
+		scroll-snap-align: start;
+	}
+
+	.home .featured-carousel__nav {
+		display: block;
+		position: absolute;
+		inset: 0;
+		z-index: 4;
+		pointer-events: none;
+	}
+
+	.home .featured-carousel__btn {
+		pointer-events: auto;
+		position: absolute;
+		top: 50%;
+		margin-top: -21px;
+		width: 42px;
+		height: 42px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border: 1px solid var(--c-line);
+		border-radius: 50%;
+		background: rgba(255, 255, 255, .94);
+		color: var(--c-text-strong);
+		font-size: 24px;
+		line-height: 1;
+		cursor: pointer;
+		box-shadow: 0 8px 22px rgba(15, 23, 42, .16);
+		transition: background .2s ease, color .2s ease, border-color .2s ease, transform .2s ease;
+	}
+
+	.home .featured-carousel__btn:hover {
+		background: var(--c-brand);
+		border-color: var(--c-brand);
+		color: #fff;
+		transform: scale(1.08);
+	}
+
+	.home .featured-carousel__prev {
+		left: -20px;
+	}
+
+	.home .featured-carousel__next {
+		right: -20px;
+	}
 }
 
 /* ===== 响应式 ===== */
@@ -894,6 +1012,14 @@
 	.home .tip-card__link span,
 	.home .quote-card,
 	.home .quotes-btn {
+		transition: none;
+	}
+
+	.home .sec-link::after {
+		animation: none;
+	}
+
+	.home .sec-link::before {
 		transition: none;
 	}
 }

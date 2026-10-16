@@ -189,10 +189,16 @@ $ew_quotes = array(
 				<h2 class="sec-title"><?php ew_esc_html_e('Featured'); ?> <em><?php ew_esc_html_e('Products'); ?></em></h2>
 				<a class="sec-link" href="<?php echo esc_url( $ew_browse_url ); ?>"><?php ew_esc_html_e('View All'); ?> <span class="sec-link__arrow" aria-hidden="true">→</span></a>
 			</div>
-			<div class="prod-grid">
-				<?php foreach ( $ew_featured_products as $ew_i => $ew_p ) : if ( ! $ew_p ) { continue; } ?>
-					<?php get_template_part( 'template-parts/product-card', null, array( 'product' => $ew_p, 'anim' => $ew_i + 2 ) ); ?>
-				<?php endforeach; ?>
+			<div class="featured-carousel" data-autoplay="4500">
+				<div class="prod-grid" id="featured-carousel-track">
+					<?php foreach ( $ew_featured_products as $ew_i => $ew_p ) : if ( ! $ew_p ) { continue; } ?>
+						<?php get_template_part( 'template-parts/product-card', null, array( 'product' => $ew_p, 'anim' => $ew_i + 2 ) ); ?>
+					<?php endforeach; ?>
+				</div>
+				<div class="featured-carousel__nav">
+					<button type="button" class="featured-carousel__btn featured-carousel__prev" aria-label="<?php ew_esc_attr_e('Previous products'); ?>"><span aria-hidden="true">‹</span></button>
+					<button type="button" class="featured-carousel__btn featured-carousel__next" aria-label="<?php ew_esc_attr_e('Next products'); ?>"><span aria-hidden="true">›</span></button>
+				</div>
 			</div>
 		</div>
 	</section>

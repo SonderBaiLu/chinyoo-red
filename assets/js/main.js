@@ -134,6 +134,51 @@
             });
         });
 
+        // ---- 首页 Featured 产品：PC 自动轮播 + 左右箭头 ----
+        var fcTrack = document.getElementById('featured-carousel-track');
+        if (fcTrack) {
+            var fcWrap = fcTrack.closest('.featured-carousel');
+            var fcPrev = fcWrap ? fcWrap.querySelector('.featured-carousel__prev') : null;
+            var fcNext = fcWrap ? fcWrap.querySelector('.featured-carousel__next') : null;
+            var fcDelay = fcWrap ? parseInt(fcWrap.getAttribute('data-autoplay'), 10) : 0;
+            if (!fcDelay || fcDelay < 1000) { fcDelay = 4500; }
+            var fcTimer = null;
+
+            var fcStep = function () {
+                var card = fcTrack.querySelector('.product-card, .prod-card');
+                if (!card) { return fcTrack.clientWidth; }
+                var gap = parseFloat(window.getComputedStyle(fcTrack).columnGap) || 0;
+                return card.getBoundingClientRect().width + gap;
+            };
+            var fcMax = function () { return fcTrack.scrollWidth - fcTrack.clientWidth; };
+            var fcGo = function (dir) {
+                var max = fcMax();
+                if (max <= 1) { return; }
+                var next = fcTrack.scrollLeft + dir * fcStep();
+                if (dir > 0 && next >= max - 1) { next = 0; }
+                else if (dir < 0 && next <= 1) { next = max; }
+                fcTrack.scrollTo({ left: next, behavior: 'smooth' });
+            };
+            var fcStop = function () { if (fcTimer) { window.clearInterval(fcTimer); fcTimer = null; } };
+            var fcStart = function () { fcStop(); fcTimer = window.setInterval(function () { fcGo(1); }, fcDelay); };
+
+            if (fcPrev) { fcPrev.addEventListener('click', function () { fcStop(); fcGo(-1); fcStart(); }); }
+            if (fcNext) { fcNext.addEventListener('click', function () { fcStop(); fcGo(1); fcStart(); }); }
+            fcTrack.addEventListener('mouseenter', fcStop);
+            fcTrack.addEventListener('mouseleave', fcStart);
+            fcTrack.addEventListener('touchstart', fcStop, { passive: true });
+
+            // 自动播放仅在桌面（与 CSS 轮播断点一致）且未开启减少动效时启用
+            var fcMq = window.matchMedia('(min-width: 993px)');
+            var fcReduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+            var fcSync = function () {
+                if (fcMq.matches && !fcReduce.matches) { fcStart(); } else { fcStop(); }
+            };
+            if (fcMq.addEventListener) { fcMq.addEventListener('change', fcSync); }
+            if (fcReduce.addEventListener) { fcReduce.addEventListener('change', fcSync); }
+            fcSync();
+        }
+
         // ---- 锚点平滑滚动 ----
         document.querySelectorAll('a[href^="#"]').forEach(function (link) {
             link.addEventListener('click', function (e) {

@@ -495,15 +495,6 @@ while ( have_posts() ) :
             </div>
         </div>
 
-        <section class="product-inquiry-section product-inquiry-section--full" id="inquiry">
-            <div class="product-inquiry-section__intro">
-                <p class="product-inquiry-section__eyebrow"><?php ew_esc_html_e( 'Factory Direct' ); ?></p>
-                <h2><?php ew_esc_html_e( 'Request a Quote for This Model' ); ?></h2>
-                <p><?php ew_esc_html_e( 'Tell us your quantity, market and product requirements. Our team will respond within 24 hours.' ); ?></p>
-            </div>
-            <?php get_template_part( 'template-parts/inquiry-form', null, array( 'product_name' => $inquiry_product_name ) ); ?>
-        </section>
-
         <!-- Product details -->
         <div class="product-tabs" id="product-detail-tabs">
             <div class="product-tabs__nav" role="tablist">
@@ -682,6 +673,15 @@ while ( have_posts() ) :
                 </div>
             </section>
         <?php endif; ?>
+
+        <section class="product-inquiry-section product-inquiry-section--full" id="inquiry">
+            <div class="product-inquiry-section__intro">
+                <p class="product-inquiry-section__eyebrow"><?php ew_esc_html_e( 'Factory Direct' ); ?></p>
+                <h2><?php ew_esc_html_e( 'Request a Quote for This Model' ); ?></h2>
+                <p><?php ew_esc_html_e( 'Tell us your quantity, market and product requirements. Our team will respond within 24 hours.' ); ?></p>
+            </div>
+            <?php get_template_part( 'template-parts/inquiry-form', null, array( 'product_name' => $inquiry_product_name ) ); ?>
+        </section>
 
         <?php
         /* --------------------------------------------------------------------
