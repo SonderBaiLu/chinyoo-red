@@ -21,6 +21,7 @@ require_once EW_THEME_DIR . '/inc/custom-post-types.php';
 require_once EW_THEME_DIR . '/inc/custom-fields.php';
 require_once EW_THEME_DIR . '/inc/product-editor.php';
 require_once EW_THEME_DIR . '/inc/product-import.php';
+require_once EW_THEME_DIR . '/inc/turnstile.php';
 require_once EW_THEME_DIR . '/inc/inquiry-handler.php';
 require_once EW_THEME_DIR . '/inc/chinyoo-filter.php';
 require_once EW_THEME_DIR . '/inc/scenarios.php';

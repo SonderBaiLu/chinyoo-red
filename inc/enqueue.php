@@ -109,6 +109,18 @@ function ew_enqueue_assets() {
         true
     );
 
+    // Cloudflare Turnstile 人机验证（询盘表单）。defer 加载，不阻塞首屏。
+    wp_enqueue_script(
+        'ew-turnstile',
+        'https://challenges.cloudflare.com/turnstile/v0/api.js',
+        array(),
+        null,
+        array(
+            'in_footer' => true,
+            'strategy'  => 'defer',
+        )
+    );
+
     // P4 WooCommerce theme scripts (UNI-T style: series model selector,
     // inquiry CTA autofill/scroll, gallery thumbnails) — depends on jQuery.
     wp_enqueue_script(

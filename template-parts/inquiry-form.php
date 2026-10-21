@@ -109,6 +109,15 @@ $ew_cc_sel           = isset( $ew_cc_lang_defaults[ $ew_cc_lang ] ) ? $ew_cc_lan
                   required></textarea>
     </div>
     <div class="inquiry-form__feedback" id="inquiry-feedback" style="display:none;"></div>
+
+    <?php // Turnstile 人机验证：token 由组件自己写进 cf-turnstile-response 字段，随 FormData 一起提交。 ?>
+    <div class="inquiry-form__turnstile">
+        <div class="cf-turnstile"
+             data-sitekey="<?php echo esc_attr( EW_TURNSTILE_SITE_KEY ); ?>"
+             data-language="auto"
+             data-size="flexible"></div>
+    </div>
+
     <button type="submit" class="btn btn--inquiry btn--lg" style="width:100%; padding:14px 0; font-size:1rem;">
         <?php ew_esc_html_e('Submit Inquiry'); ?>
     </button>

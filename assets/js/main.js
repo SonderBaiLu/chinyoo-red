@@ -100,6 +100,10 @@
                 .finally(function () {
                     btn.textContent = originalText;
                     btn.disabled = false;
+                    // token 一次性使用，重置后下次提交才有可用 token
+                    if (window.turnstile) {
+                        try { window.turnstile.reset(); } catch (err) {}
+                    }
                 });
             });
         }

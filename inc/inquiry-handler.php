@@ -24,6 +24,13 @@ function ew_handle_inquiry() {
         wp_send_json_error( array( 'message' => ew__('Security check failed. Please refresh the page.') ) );
     }
 
+    // 人机验证：未通过就明确报错让真人重试，区别于下面的静默丢弃。
+    $ew_ts_token = isset( $_POST['cf-turnstile-response'] ) ? sanitize_text_field( wp_unslash( $_POST['cf-turnstile-response'] ) ) : '';
+    $ew_ts_ip    = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+    if ( ! ew_turnstile_verify( $ew_ts_token, $ew_ts_ip ) ) {
+        wp_send_json_error( array( 'message' => ew__('Human verification failed. Please complete it and try again.') ) );
+    }
+
     // 防垃圾询盘：蜜罐 / 频率限制 / 内容过滤。命中则静默丢弃——
     // 返回与成功一致的消息，但不创建询盘、不发邮件、不推钉钉（不告诉机器人它被拦了）。
     if ( ew_inquiry_is_spam( $_POST ) ) {

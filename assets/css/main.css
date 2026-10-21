@@ -1483,6 +1483,15 @@ section {
     color: #b71c1c
 }
 
+/* Turnstile 组件与提交按钮留出间距 */
+.inquiry-form__turnstile {
+    margin-bottom: 12px
+}
+
+.inquiry-form__turnstile .cf-turnstile {
+    width: 100%
+}
+
 /* ===== 独立 Quote 页(/quote/) ===== */
 .quote-grid {
     display: grid;
