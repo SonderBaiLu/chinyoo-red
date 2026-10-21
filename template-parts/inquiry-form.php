@@ -8,66 +8,6 @@ if ( isset( $args ) && is_array( $args ) && isset( $args['product_name'] ) ) {
 	$product_name = $product_name;
 }
 $product_name = is_string( $product_name ) ? trim( $product_name ) : '';
-
-// 国家区号下拉（参考图3）：用于 Phone 字段，提交时与号码拼成一串存入询盘。
-$ew_countries = array(
-	'+1'    => '🇺🇸 United States +1',
-	'+1c'   => '🇨🇦 Canada +1',
-	'+44'   => '🇬🇧 United Kingdom +44',
-	'+86'   => '🇨🇳 China +86',
-	'+852'  => '🇭🇰 Hong Kong +852',
-	'+886'  => '🇹🇼 Taiwan +886',
-	'+81'   => '🇯🇵 Japan +81',
-	'+82'   => '🇰🇷 South Korea +82',
-	'+91'   => '🇮🇳 India +91',
-	'+92'   => '🇵🇰 Pakistan +92',
-	'+880'  => '🇧🇩 Bangladesh +880',
-	'+84'   => '🇻🇳 Vietnam +84',
-	'+66'   => '🇹🇭 Thailand +66',
-	'+60'   => '🇲🇾 Malaysia +60',
-	'+65'   => '🇸🇬 Singapore +65',
-	'+62'   => '🇮🇩 Indonesia +62',
-	'+63'   => '🇵🇭 Philippines +63',
-	'+61'   => '🇦🇺 Australia +61',
-	'+64'   => '🇳🇿 New Zealand +64',
-	'+49'   => '🇩🇪 Germany +49',
-	'+33'   => '🇫🇷 France +33',
-	'+39'   => '🇮🇹 Italy +39',
-	'+34'   => '🇪🇸 Spain +34',
-	'+31'   => '🇳🇱 Netherlands +31',
-	'+32'   => '🇧🇪 Belgium +32',
-	'+43'   => '🇦🇹 Austria +43',
-	'+41'   => '🇨🇭 Switzerland +41',
-	'+46'   => '🇸🇪 Sweden +46',
-	'+47'   => '🇳🇴 Norway +47',
-	'+45'   => '🇩🇰 Denmark +45',
-	'+358'  => '🇫🇮 Finland +358',
-	'+48'   => '🇵🇱 Poland +48',
-	'+420'  => '🇨🇿 Czechia +420',
-	'+351'  => '🇵🇹 Portugal +351',
-	'+30'   => '🇬🇷 Greece +30',
-	'+353'  => '🇮🇪 Ireland +353',
-	'+7'    => '🇷🇺 Russia +7',
-	'+380'  => '🇺🇦 Ukraine +380',
-	'+90'   => '🇹🇷 Turkey +90',
-	'+972'  => '🇮🇱 Israel +972',
-	'+966'  => '🇸🇦 Saudi Arabia +966',
-	'+971'  => '🇦🇪 UAE +971',
-	'+20'   => '🇪🇬 Egypt +20',
-	'+27'   => '🇿🇦 South Africa +27',
-	'+234'  => '🇳🇬 Nigeria +234',
-	'+254'  => '🇰🇪 Kenya +254',
-	'+55'   => '🇧🇷 Brazil +55',
-	'+52'   => '🇲🇽 Mexico +52',
-	'+54'   => '🇦🇷 Argentina +54',
-	'+56'   => '🇨🇱 Chile +56',
-	'+57'   => '🇨🇴 Colombia +57',
-	'+51'   => '🇵🇪 Peru +51',
-);
-// 按当前语言预选区号（默认美国 +1）。
-$ew_cc_lang          = function_exists( 'pll_current_language' ) ? pll_current_language() : '';
-$ew_cc_lang_defaults = array( 'zh' => '+86', 'ru' => '+7', 'es' => '+34', 'ar' => '+971' );
-$ew_cc_sel           = isset( $ew_cc_lang_defaults[ $ew_cc_lang ] ) ? $ew_cc_lang_defaults[ $ew_cc_lang ] : '+1';
 ?>
 <form class="inquiry-form" id="ew-inquiry-form" method="post"<?php if ( isset( $args ) && is_array( $args ) && isset( $args['anim'] ) && '' !== (string) $args['anim'] ) { echo ' data-animation="' . esc_attr( $args['anim'] ) . '"'; } ?>>
     <div class="inquiry-form__row">
@@ -81,14 +21,8 @@ $ew_cc_sel           = isset( $ew_cc_lang_defaults[ $ew_cc_lang ] ) ? $ew_cc_lan
         </div>
         <div class="inquiry-form__field">
             <label for="inquiry_phone"><?php ew_esc_html_e('Phone / WhatsApp'); ?> <span style="color:#cc0000;">*</span></label>
-            <div class="inquiry-form__phone">
-                <select id="inquiry_phone_cc" name="inquiry_phone_cc" class="inquiry-form__cc" aria-label="<?php ew_esc_attr_e('Country code'); ?>">
-                    <?php foreach ( $ew_countries as $ew_cc_val => $ew_cc_label ) : ?>
-                        <option value="<?php echo esc_attr( $ew_cc_val ); ?>"<?php selected( $ew_cc_val, $ew_cc_sel ); ?>><?php echo esc_html( $ew_cc_label ); ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <input type="tel" id="inquiry_phone" name="inquiry_phone" placeholder="<?php ew_esc_attr_e('WhatsApp / WeChat number'); ?>" required>
-            </div>
+            <input type="tel" id="inquiry_phone" name="inquiry_phone" placeholder="<?php ew_esc_attr_e('WhatsApp / WeChat number'); ?>" autocomplete="tel" inputmode="tel" required>
+            <input type="hidden" id="inquiry_phone_country" name="inquiry_phone_country" value="us">
         </div>
     </div>
     <div class="inquiry-form__field">
@@ -114,7 +48,7 @@ $ew_cc_sel           = isset( $ew_cc_lang_defaults[ $ew_cc_lang ] ) ? $ew_cc_lan
     <div class="inquiry-form__turnstile">
         <div class="cf-turnstile"
              data-sitekey="<?php echo esc_attr( EW_TURNSTILE_SITE_KEY ); ?>"
-             data-language="auto"
+             data-language="<?php echo esc_attr( ew_turnstile_language() ); ?>"
              data-size="flexible"></div>
     </div>
 

@@ -12,6 +12,20 @@ function ew_turnstile_enabled() {
     return defined( 'CHINYOO_TURNSTILE_SECRET' ) && '' !== CHINYOO_TURNSTILE_SECRET;
 }
 
+// Turnstile 界面语言跟随 Polylang 当前语言，不使用浏览器语言自动猜测。
+function ew_turnstile_language() {
+    $language = function_exists( 'pll_current_language' ) ? pll_current_language( 'slug' ) : '';
+    $languages = array(
+        'en' => 'en-us',
+        'zh' => 'zh-cn',
+        'es' => 'es-es',
+        'ru' => 'ru-ru',
+        'ar' => 'ar-eg',
+    );
+
+    return isset( $languages[ $language ] ) ? $languages[ $language ] : 'auto';
+}
+
 // 通过返回 true。未启用、或 Cloudflare 接口不可达时放行，避免误杀真实询盘。
 function ew_turnstile_verify( $token, $ip = '' ) {
     if ( ! ew_turnstile_enabled() ) {

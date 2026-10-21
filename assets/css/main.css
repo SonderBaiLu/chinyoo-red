@@ -214,7 +214,19 @@ button {
     padding: 10px 18px;
     font-size: var(--fs-base);
     font-family: inherit;
-    background: transparent
+    background: transparent;
+    -webkit-appearance: none;
+    appearance: none
+}
+
+/* Windows/Chromium/Safari 可能给 search 输入框再加一个原生放大镜，
+   会与右侧自定义搜索按钮重复，并压住 placeholder。 */
+.hdr-search input[type="search"]::-webkit-search-decoration,
+.hdr-search input[type="search"]::-webkit-search-cancel-button,
+.mobile-nav-search input[type="search"]::-webkit-search-decoration,
+.mobile-nav-search input[type="search"]::-webkit-search-cancel-button {
+    display: none;
+    -webkit-appearance: none
 }
 
 .hdr-search button {
@@ -717,7 +729,9 @@ body.drawer-open .drawer-backdrop {
     padding: 11px 16px;
     font-size: var(--fs-base);
     font-family: inherit;
-    background: transparent
+    background: transparent;
+    -webkit-appearance: none;
+    appearance: none
 }
 
 .mobile-nav-search button {
@@ -1432,36 +1446,6 @@ section {
     resize: vertical
 }
 
-/* 国家区号 + 手机号（参考图3）：区号下拉定宽，号码吃掉剩余空间。 */
-.inquiry-form__phone {
-    display: flex;
-    gap: 8px
-}
-
-.inquiry-form__phone .inquiry-form__cc {
-    flex: 0 0 auto;
-    width: auto;
-    max-width: 46%;
-    padding: 10px 8px;
-    font-size: var(--fs-sm)
-}
-
-.inquiry-form__phone input {
-    flex: 1 1 auto;
-    min-width: 0
-}
-
-@media(max-width: 480px) {
-    .inquiry-form__phone {
-        flex-wrap: wrap
-    }
-
-    .inquiry-form__phone .inquiry-form__cc {
-        max-width: 100%;
-        width: 100%
-    }
-}
-
 .inquiry-form__feedback {
     padding: 10px 12px;
     border-radius: var(--r-sm);
@@ -1469,6 +1453,34 @@ section {
     margin-bottom: 12px;
     display: none;
     text-align: center
+}
+
+.inquiry-form .iti {
+    width: 100%
+}
+
+.inquiry-form .iti__country-container {
+    border-radius: var(--r-sm) 0 0 var(--r-sm)
+}
+
+.inquiry-form .iti__selected-country {
+    padding: 0 10px
+}
+
+.inquiry-form .iti__dropdown-content {
+    z-index: 1000
+}
+
+/* 国家下拉搜索框：主题的通用 input padding 会覆盖 intl-tel-input
+   为左侧放大镜和右侧清除按钮重新预留空间。 */
+.inquiry-form .iti__search-input {
+    padding-left: calc(var(--iti-spacer-horizontal) + var(--iti-globe-icon-size) + var(--iti-spacer-horizontal));
+    padding-right: calc(var(--iti-spacer-horizontal) + var(--iti-clear-icon-size) + var(--iti-spacer-horizontal))
+}
+
+[dir="rtl"] .inquiry-form .iti__search-input {
+    padding-left: calc(var(--iti-spacer-horizontal) + var(--iti-clear-icon-size) + var(--iti-spacer-horizontal));
+    padding-right: calc(var(--iti-spacer-horizontal) + var(--iti-globe-icon-size) + var(--iti-spacer-horizontal))
 }
 
 .inquiry-form__feedback--success {

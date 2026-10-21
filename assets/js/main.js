@@ -58,7 +58,26 @@
         // ---- AJAX 询盘表单 ----
         var inquiryForm = document.getElementById('ew-inquiry-form');
         if (inquiryForm) {
-            inquiryForm.addEventListener('submit', function (e) {
+            var phoneInput = inquiryForm.querySelector('#inquiry_phone');
+            var phoneCountry = inquiryForm.querySelector('#inquiry_phone_country');
+            var phonePicker = null;
+
+            if (phoneInput && window.intlTelInput) {
+                phonePicker = window.intlTelInput(phoneInput, {
+                    initialCountry: ew_ajax.iti_initial_country || 'us',
+                    separateDialCode: true,
+                    loadUtils: function () {
+                        return import(ew_ajax.iti_utils_url);
+                    }
+                });
+
+                phoneInput.addEventListener('countrychange', function () {
+                    var country = phonePicker.getSelectedCountry();
+                    if (phoneCountry) phoneCountry.value = country ? country.iso2 : '';
+                });
+            }
+
+            inquiryForm.addEventListener('submit', async function (e) {
                 e.preventDefault();
                 var feedback = document.getElementById('inquiry-feedback');
                 var btn = inquiryForm.querySelector('button[type="submit"]');
@@ -67,6 +86,18 @@
                 var originalText = btn.textContent;
                 btn.textContent = 'Sending...';
                 btn.disabled = true;
+
+                if (phonePicker) {
+                    try {
+                        await phonePicker.promise;
+                        var internationalNumber = phonePicker.getNumber();
+                        if (internationalNumber) phoneInput.value = internationalNumber;
+                        var selectedCountry = phonePicker.getSelectedCountry();
+                        if (phoneCountry) phoneCountry.value = selectedCountry ? selectedCountry.iso2 : '';
+                    } catch (error) {
+                        // utils 加载失败时保留用户原始输入，不阻断询盘。
+                    }
+                }
 
                 var formData = new FormData(inquiryForm);
                 formData.append('action', 'ew_submit_inquiry');
@@ -84,6 +115,7 @@
                             feedback.className = 'inquiry-form__feedback inquiry-form__feedback--success';
                             feedback.textContent = data.data.message;
                             inquiryForm.reset();
+                            if (phonePicker) phonePicker.setSelectedCountry(ew_ajax.iti_initial_country || 'us');
                         } else {
                             feedback.className = 'inquiry-form__feedback inquiry-form__feedback--error';
                             feedback.textContent = data.data.message;

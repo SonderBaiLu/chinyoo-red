@@ -43,15 +43,9 @@ function ew_handle_inquiry() {
     $name    = sanitize_text_field( $_POST['inquiry_name'] );
     $email   = sanitize_email( $_POST['inquiry_email'] );
     $phone   = sanitize_text_field( $_POST['inquiry_phone'] );
-    // 国家区号（图3）：'+1c' 是加拿大（为与美国的 +1 选项区分而设的占位键），落库前归一为 '+1'。
-    $phone_cc = isset( $_POST['inquiry_phone_cc'] ) ? sanitize_text_field( $_POST['inquiry_phone_cc'] ) : '';
-    if ( '+1c' === $phone_cc ) {
-        $phone_cc = '+1';
-    }
-    // 仅在合法区号且号码未自带该前缀时拼接，避免重复（+86 +86 138…）。
-    if ( '' !== $phone_cc && preg_match( '/^\+[0-9]{1,4}$/', $phone_cc ) && 0 !== strpos( ltrim( $phone ), $phone_cc ) ) {
-        $phone = $phone_cc . ' ' . $phone;
-    }
+    $phone_country = isset( $_POST['inquiry_phone_country'] )
+        ? strtoupper( sanitize_text_field( $_POST['inquiry_phone_country'] ) )
+        : '';
     $company = sanitize_text_field( $_POST['inquiry_company'] );
     $product = sanitize_text_field( $_POST['inquiry_product'] );
     $message = sanitize_textarea_field( $_POST['inquiry_message'] );
@@ -86,6 +80,7 @@ function ew_handle_inquiry() {
     update_field( 'inquiry_name', $name, $inquiry_id );
     update_field( 'inquiry_email', $email, $inquiry_id );
     update_field( 'inquiry_phone', $phone, $inquiry_id );
+    update_post_meta( $inquiry_id, '_inquiry_phone_country', $phone_country );
     update_field( 'inquiry_company', $company, $inquiry_id );
     update_field( 'inquiry_product', $product, $inquiry_id );
     update_field( 'inquiry_message', $message, $inquiry_id );

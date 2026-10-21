@@ -27,6 +27,8 @@ function ew_enqueue_assets() {
     $v_main = ($t = filemtime( "$dir/assets/css/main.css" )) === false ? EW_THEME_VERSION : (string) $t;
     $v_p4   = ($t = filemtime( "$dir/assets/css/p4.css"   )) === false ? EW_THEME_VERSION : (string) $t;
     $v_mainjs = ($t = filemtime( "$dir/assets/js/main.js" )) === false ? EW_THEME_VERSION : (string) $t;
+    $v_iti_css = ($t = filemtime( "$dir/assets/vendor/intl-tel-input/css/intlTelInput.min.css" )) === false ? '29.5.0' : (string) $t;
+    $v_iti_js  = ($t = filemtime( "$dir/assets/vendor/intl-tel-input/js/intlTelInput.min.js" )) === false ? '29.5.0' : (string) $t;
     $v_p4js   = ($t = filemtime( "$dir/assets/js/p4-woo.js")) === false ? EW_THEME_VERSION : (string) $t;
     $v_gsap   = ($t = filemtime( "$dir/assets/js/vendor/gsap.min.js"        )) === false ? EW_THEME_VERSION : (string) $t;
     $v_st     = ($t = filemtime( "$dir/assets/js/vendor/ScrollTrigger.min.js")) === false ? EW_THEME_VERSION : (string) $t;
@@ -38,6 +40,14 @@ function ew_enqueue_assets() {
         EW_THEME_URI . '/assets/css/main.css',
         array( 'ew-tokens' ),
         $v_main
+    );
+
+    // 国际电话国家/区号选择器，国旗图片本地托管，避免 Windows 将 Emoji 显示为 US。
+    wp_enqueue_style(
+        'ew-intl-tel-input',
+        EW_THEME_URI . '/assets/vendor/intl-tel-input/css/intlTelInput.min.css',
+        array( 'ew-main-style' ),
+        $v_iti_css
     );
 
     // P4 UNI-T style components (filter sidebar, cards, spec matrix, CTA)
@@ -100,11 +110,19 @@ function ew_enqueue_assets() {
         );
     }
 
+    wp_enqueue_script(
+        'ew-intl-tel-input',
+        EW_THEME_URI . '/assets/vendor/intl-tel-input/js/intlTelInput.min.js',
+        array(),
+        $v_iti_js,
+        true
+    );
+
     // Main JavaScript (loaded in footer)
     wp_enqueue_script(
         'ew-main-script',
         EW_THEME_URI . '/assets/js/main.js',
-        array(),
+        array( 'ew-intl-tel-input' ),
         $v_mainjs,
         true
     );
@@ -213,10 +231,14 @@ function ew_enqueue_assets() {
         );
     }
 
-    // Pass AJAX URL and nonce to JS
+    // Pass AJAX URL, nonce and language-aware telephone defaults to JS.
+    $ew_current_lang = function_exists( 'pll_current_language' ) ? pll_current_language( 'slug' ) : 'en';
+    $ew_phone_countries = array( 'en' => 'us', 'zh' => 'cn', 'es' => 'es', 'ru' => 'ru', 'ar' => 'ae' );
     wp_localize_script( 'ew-main-script', 'ew_ajax', array(
         'ajax_url' => admin_url( 'admin-ajax.php' ),
         'nonce'    => wp_create_nonce( 'ew_inquiry_nonce' ),
+        'iti_utils_url' => EW_THEME_URI . '/assets/vendor/intl-tel-input/js/utils.js',
+        'iti_initial_country' => isset( $ew_phone_countries[ $ew_current_lang ] ) ? $ew_phone_countries[ $ew_current_lang ] : 'us',
     ));
 }
 add_action( 'wp_enqueue_scripts', 'ew_enqueue_assets' );
