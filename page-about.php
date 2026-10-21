@@ -49,9 +49,18 @@ get_header();
 	</section>
 
 	<section class="stats-row">
-		<div class="stat"><b>18+</b><span><?php ew_esc_html_e('Years Experience'); ?></span></div>
-		<div class="stat"><b>127</b><span><?php ew_esc_html_e('Product Models'); ?></span></div>
-		<div class="stat"><b>40+</b><span><?php ew_esc_html_e('Export Countries'); ?></span></div>
+		<div class="stat">
+			<img class="stat__icon" src="<?php echo esc_url( get_template_directory_uri() . '/assets/images/stats/stat-years-experience.png' ); ?>" alt="" width="96" height="96" loading="lazy" decoding="async" aria-hidden="true">
+			<div class="stat__copy"><b>18+</b><span><?php ew_esc_html_e('Years Experience'); ?></span></div>
+		</div>
+		<div class="stat">
+			<img class="stat__icon" src="<?php echo esc_url( get_template_directory_uri() . '/assets/images/stats/stat-product-models.png' ); ?>" alt="" width="96" height="96" loading="lazy" decoding="async" aria-hidden="true">
+			<div class="stat__copy"><b>127</b><span><?php ew_esc_html_e('Product Models'); ?></span></div>
+		</div>
+		<div class="stat">
+			<img class="stat__icon" src="<?php echo esc_url( get_template_directory_uri() . '/assets/images/stats/stat-export-countries.png' ); ?>" alt="" width="96" height="96" loading="lazy" decoding="async" aria-hidden="true">
+			<div class="stat__copy"><b>40+</b><span><?php ew_esc_html_e('Export Countries'); ?></span></div>
+		</div>
 	</section>
 </div>
 

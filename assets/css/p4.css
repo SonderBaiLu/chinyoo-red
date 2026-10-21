@@ -185,10 +185,14 @@ a.cert:hover{background:var(--primary)}
 .about-visual .ph{display:flex;flex-direction:column;align-items:center;justify-content:center;height:280px;background:var(--bg);border:1px dashed var(--line);border-radius:var(--r-lg);color:var(--muted);font-size:var(--fs-base)}
 .about-visual{display:flex;align-items:center;justify-content:center}
 .about-visual .about-factory-img{max-height:340px;width:auto;max-width:100%;border-radius:var(--r-lg)}
-.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:28px 0}
-.stat{background:var(--primary);color:#fff;border-radius:var(--r-lg);padding:24px 16px;text-align:center}
-.stat b{display:block;font-size:var(--fs-4xl);font-weight:700}
-.stat span{font-size:var(--fs-sm);opacity:.92}
+.stats-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding:28px 0}
+.stat{position:relative;display:grid;grid-template-columns:82px minmax(0,1fr);align-items:center;gap:18px;background:transparent;color:#0f172a;border:0;border-radius:0;padding:18px 22px;text-align:left;box-shadow:none}
+.stat::after{display:none}
+.stat__icon,.stat__copy{position:relative;z-index:1}
+.stat__icon{display:block;width:82px;height:82px;object-fit:contain}
+.stat__copy{min-width:0}
+.stat b{display:block;font-size:var(--fs-4xl);font-weight:700;line-height:1.05}
+.stat span{display:block;margin-top:6px;font-size:var(--fs-sm);line-height:1.35;opacity:.92}
 .about-certs,.about-address{padding:24px 0}
 .cert-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:20px}
 .cert-card{background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:22px 16px;text-align:center}
@@ -240,6 +244,7 @@ a.cert-card:hover{border-color:var(--primary);box-shadow:0 6px 18px rgba(204,39,
 	.contact-grid,.about-intro{grid-template-columns:1fr}
 	.oem-grid{grid-template-columns:repeat(2,1fr)}
 	.stats-row{grid-template-columns:repeat(2,1fr)}
+	.stats-row .stat:last-child:nth-child(odd){grid-column:1/-1}
 	.cert-grid{grid-template-columns:repeat(2,1fr)}
 	.cert-card__img{height:160px}
 	.about-grid{grid-template-columns:1fr}
@@ -253,6 +258,10 @@ a.cert-card:hover{border-color:var(--primary);box-shadow:0 6px 18px rgba(204,39,
 	.chinyoo-filters{margin-bottom:20px}
 }
 @media (max-width: 767px){
+	.stats-row{grid-template-columns:1fr}
+	.stats-row .stat:last-child:nth-child(odd){grid-column:auto}
+	.stat{grid-template-columns:72px minmax(0,1fr);padding:16px 20px}
+	.stat__icon{width:72px;height:72px}
 	.product-table-style2{display:block;overflow-x:auto;white-space:nowrap}
 	.cat-main .prod-grid{grid-template-columns:repeat(2,1fr);gap:14px}
 	.main-top{flex-direction:column;align-items:flex-start}
@@ -463,6 +472,9 @@ body{font-size:var(--fs-lg)}
 
 /* 内页统一采用首页同款深色品牌层级。 */
 .page-head--premium{position:relative;overflow:hidden;padding:72px 0;background:#0f172a;color:#fff}
+.page-head--solutions{background:#0f172a url('../images/heroes/hero-applications-solutions.jpg') center/cover no-repeat}
+.page-head--support{background:#0f172a url('../images/heroes/hero-services-support-v2.jpg') center/cover no-repeat}
+.page-head--about{background:#0f172a url('../images/heroes/hero-about-company-v2.jpg') center/cover no-repeat}
 .page-head--premium::before{content:"";position:absolute;inset:0;background:linear-gradient(118deg,rgba(15,23,42,.96),rgba(15,23,42,.78) 54%,rgba(218,39,53,.46));pointer-events:none}
 .page-head--premium::after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(90deg,#000,transparent 86%);pointer-events:none}
 .page-head--premium .container{position:relative;z-index:1;max-width:960px}
@@ -699,3 +711,7 @@ body{font-size:var(--fs-lg)}
 
 .page-head--contact::before{content:"";background:linear-gradient(90deg,#071426 0%,rgba(7,20,38,.95) 23%,rgba(7,20,38,0) 55%)}
 @media(max-width:767px){.page-head--contact::before{content:none}}
+
+/* About statistics: keep the generated icons and copy without card backgrounds. */
+.inner-page--about .stat{overflow:visible;background:transparent}
+.inner-page--about .stat::after{display:none;content:none}
