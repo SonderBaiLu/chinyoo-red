@@ -268,6 +268,22 @@ function ew_total_product_count() {
     return $count;
 }
 
+/* 当前语言的 /shop/ 地址（WooCommerce shop 页没有 Polylang 翻译时用语言前缀兜底） */
+function ew_shop_url() {
+    $shop_id = function_exists( 'wc_get_page_id' ) ? (int) wc_get_page_id( 'shop' ) : 0;
+    $lang    = function_exists( 'pll_current_language' ) ? pll_current_language() : '';
+    if ( $shop_id && $lang && function_exists( 'pll_get_post' ) ) {
+        $translated = (int) pll_get_post( $shop_id, $lang );
+        if ( $translated ) { return get_permalink( $translated ); }
+        if ( function_exists( 'pll_default_language' ) && $lang !== pll_default_language() ) {
+            $slug = (string) get_post_field( 'post_name', $shop_id );
+            if ( '' !== $slug ) { return home_url( '/' . $lang . '/' . $slug . '/' ); }
+        }
+    }
+    if ( function_exists( 'wc_get_page_permalink' ) ) { return wc_get_page_permalink( 'shop' ); }
+    return get_post_type_archive_link( 'product' );
+}
+
 /* ---------- 多语言：把默认语言商品同步到其它 Polylang 语言 ---------- */
 function ew_product_translation_meta_keys() {
     return array(
