@@ -243,14 +243,16 @@ function ew_import_one_folder( $dir, $folder_name, $options ) {
     }
 
     // 重复检查：同 SKU 已存在则跳过，不重复创建
+    // cache_results=false：导入同批次重复型号时，避免复用本请求早先的空查询缓存
     $found = get_posts( array(
         'post_type'        => 'product',
         'meta_key'         => '_sku',
         'meta_value'       => $folder_name,
-        'post_status'      => 'publish,draft',
+        'post_status'      => array( 'publish', 'draft' ),
         'numberposts'      => 1,
         'fields'           => 'ids',
         'suppress_filters' => true,
+        'cache_results'    => false,
     ) );
     if ( ! empty( $found ) ) {
         $ex = (int) $found[0];
