@@ -187,8 +187,8 @@ $highlight_line = implode( ' · ', $highlight_parts );
 				<?php ew_esc_html_e('Learn More'); ?>
 			</a>
 			<?php
-			// 型号经 inquiry_model 参数带到详情页，供询盘表单预填
-			$inquiry_href = add_query_arg( 'inquiry_model', rawurlencode( $models_line ), $permalink ) . '#inquiry';
+			// 询盘统一跳到报价页，型号经 inquiry_model 参数预填
+			$inquiry_href = add_query_arg( 'inquiry_model', $models_line, ew_page_url( 'quote' ) ) . '#inquiry';
 			?>
 			<a href="<?php echo esc_url( $inquiry_href ); ?>"
 			   class="btn btn--inquiry btn--sm js-inquiry-cta"

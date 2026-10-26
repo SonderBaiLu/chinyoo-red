@@ -344,11 +344,6 @@ while ( have_posts() ) :
     $short_description = (string) $product->get_short_description();
     $packaging         = isset( $current_model['packaging'] ) ? (string) $current_model['packaging'] : '';
     $current_sku       = '' !== $current_model['sku'] ? $current_model['sku'] : $current_model['label'];
-
-    $inquiry_product_name = $series_title;
-    if ( '' !== $current_model['label'] ) {
-        $inquiry_product_name .= ' (' . $current_model['label'] . ')';
-    }
     ?>
 
     <div class="container">
@@ -527,7 +522,8 @@ while ( have_posts() ) :
                 <?php endif; ?>
 
                 <div class="product-summary__actions">
-                    <a href="#inquiry" class="btn btn--inquiry btn--lg js-inquiry-cta"
+                    <a href="<?php echo esc_url( add_query_arg( 'inquiry_model', $current_sku, ew_page_url( 'quote' ) ) . '#inquiry' ); ?>"
+                       class="btn btn--inquiry btn--lg js-inquiry-cta"
                        data-model="<?php echo esc_attr( $current_sku ); ?>">
                         <?php ew_esc_html_e('Get a Quote'); ?>
                     </a>
@@ -752,15 +748,6 @@ while ( have_posts() ) :
                 </div>
             </section>
         <?php endif; ?>
-
-        <section class="product-inquiry-section product-inquiry-section--full" id="inquiry">
-            <div class="product-inquiry-section__intro">
-                <p class="product-inquiry-section__eyebrow"><?php ew_esc_html_e( 'Factory Direct' ); ?></p>
-                <h2><?php ew_esc_html_e( 'Request a Quote for This Model' ); ?></h2>
-                <p><?php ew_esc_html_e( 'Tell us your quantity, market and product requirements. Our team will respond within 24 hours.' ); ?></p>
-            </div>
-            <?php get_template_part( 'template-parts/inquiry-form', null, array( 'product_name' => $inquiry_product_name ) ); ?>
-        </section>
 
         <?php
         /* --------------------------------------------------------------------
