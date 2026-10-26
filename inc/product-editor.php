@@ -281,10 +281,37 @@ function ew_render_product_studio() {
     $product = $product_id ? get_post( $product_id ) : null;
     if ( $product && ( 'product' !== $product->post_type || ! current_user_can( 'edit_post', $product_id ) ) ) { $product = null; }
     $is_new = ! $product && isset( $_GET['new'] );
-    $products = get_posts( array( 'post_type' => 'product', 'post_status' => array( 'publish', 'draft', 'pending', 'private' ), 'posts_per_page' => -1, 'orderby' => 'modified', 'order' => 'DESC' ) );
+    $products = get_posts( array(
+        'post_type'        => 'product',
+        'post_status'      => array( 'publish', 'draft', 'pending', 'private' ),
+        'posts_per_page'   => -1,
+        'orderby'          => 'modified',
+        'order'            => 'DESC',
+        'suppress_filters' => true,
+        'cache_results'    => false,
+    ) );
+    // 列表只显示默认语言原版，避免每个语言版本重复出现
+    if ( function_exists( 'pll_get_post_language' ) && function_exists( 'pll_default_language' ) ) {
+        $default_lang = pll_default_language();
+        $products = array_values( array_filter( $products, function ( $item ) use ( $default_lang ) {
+            return pll_get_post_language( $item->ID ) === $default_lang;
+        } ) );
+    }
+
+    $translation_of = 0;
+    $translation_lang = '';
+    if ( $product && function_exists( 'pll_get_post_language' ) && function_exists( 'pll_default_language' ) ) {
+        $translation_lang = (string) pll_get_post_language( $product_id );
+        if ( $translation_lang && $translation_lang !== pll_default_language() ) {
+            $translation_of = (int) pll_get_post( $product_id, pll_default_language() );
+        }
+    }
     ?>
     <div class="wrap ew-product-studio">
         <div class="ew-studio-hero"><div><span class="ew-studio-kicker">PRODUCT STUDIO</span><h1><?php echo $is_new ? '新建商品' : '商品展示管理'; ?></h1><p>在清爽的页面里维护前台商品的图片、参数和详情。</p></div><a class="button" href="<?php echo esc_url( ew_product_studio_new_url() ); ?>"><span class="dashicons dashicons-plus-alt2"></span>新增商品</a></div>
+        <?php if ( $translation_of ) : ?>
+            <div class="notice notice-warning"><p><strong>当前编辑的是「<?php echo esc_html( $translation_lang ); ?>」翻译版本。</strong>图片、参数、分类会自动从英文原版同步；建议回到 <a href="<?php echo esc_url( ew_product_studio_url( $translation_of ) ); ?>">英文原版</a> 编辑，标题和简介可以在这里单独改。</p></div>
+        <?php endif; ?>
         <?php if ( isset( $_GET['saved'] ) ) : ?><div class="notice notice-success is-dismissible"><p><strong>已保存。</strong>前台页面已使用最新内容。</p></div><?php endif; ?>
         <?php if ( isset( $_GET['deleted'] ) ) : ?><div class="notice notice-success is-dismissible"><p><strong>已删除 <?php echo (int) $_GET['deleted']; ?> 个商品</strong>（含图片附件与其它语言翻译，可在媒体库回收站恢复图片）。</p></div><?php endif; ?>
         <?php if ( $is_new ) : ?>
@@ -376,6 +403,10 @@ add_action( 'admin_post_ew_product_studio_save', function () {
     else { delete_post_meta( $id, 'product_hot' ); }
 
     if ( $status !== get_post_status( $id ) ) { wp_update_post( array( 'ID' => $id, 'post_status' => $status ) ); }
+
+    // 图片/参数/分类等共用数据同步到其它语言版本
+    if ( function_exists( 'ew_product_sync_translations' ) ) { ew_product_sync_translations( $id ); }
+
     wp_safe_redirect( add_query_arg( 'saved', '1', ew_product_studio_url( $id ) ) ); exit;
 } );
 

@@ -228,14 +228,16 @@ while ( have_posts() ) :
             );
         }
     } else {
-        $pid       = $product->get_id();
-        $sku       = $product->get_sku() ? (string) $product->get_sku() : '';
-        $url_model = '' !== $sku ? $sku : $product->get_slug();
+        $pid        = $product->get_id();
+        $sku        = $product->get_sku() ? (string) $product->get_sku() : '';
+        $url_model  = '' !== $sku ? $sku : $product->get_slug();
+        $model_meta = (string) get_post_meta( $pid, 'product_model', true );
+        $label      = '' !== $model_meta ? $model_meta : ( '' !== $sku ? $sku : $url_model );
 
         $models[] = array(
             'id'        => $pid,
             'sku'       => $sku,
-            'label'     => '' !== $sku ? $sku : $url_model,
+            'label'     => $label,
             'url_model' => $url_model,
             'specs'     => ew_get_model_specs( $pid ),
             'gallery'   => ew_get_model_gallery( $pid ),
@@ -245,14 +247,16 @@ while ( have_posts() ) :
 
     // Defensive: if no model could be derived, fall back to the parent product.
     if ( empty( $models ) ) {
-        $pid       = $product->get_id();
-        $sku       = $product->get_sku() ? (string) $product->get_sku() : '';
-        $url_model = '' !== $sku ? $sku : $product->get_slug();
+        $pid        = $product->get_id();
+        $sku        = $product->get_sku() ? (string) $product->get_sku() : '';
+        $url_model  = '' !== $sku ? $sku : $product->get_slug();
+        $model_meta = (string) get_post_meta( $pid, 'product_model', true );
+        $label      = '' !== $model_meta ? $model_meta : ( '' !== $sku ? $sku : $product->get_name() );
 
         $models[] = array(
             'id'        => $pid,
             'sku'       => $sku,
-            'label'     => '' !== $sku ? $sku : $product->get_name(),
+            'label'     => $label,
             'url_model' => $url_model,
             'specs'     => ew_get_model_specs( $pid ),
             'gallery'   => ew_get_model_gallery( $pid ),

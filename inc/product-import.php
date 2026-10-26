@@ -249,6 +249,128 @@ function ew_import_category_label( $slug ) {
     return ( $term && ! is_wp_error( $term ) ) ? $term->name : $slug;
 }
 
+/* ---------- 多语言：把默认语言商品同步到其它 Polylang 语言 ---------- */
+function ew_product_translation_meta_keys() {
+    return array(
+        '_product_type',
+        '_stock_status',
+        'product_model',
+        '_model_specs',
+        '_model_gallery',
+        '_model_detail_images',
+        '_model_detail_extras',
+        '_model_features',
+        '_model_applications',
+        '_packaging',
+        '_datasheet',
+        'product_hot',
+    );
+}
+
+/* 以默认语言原版为源，创建/更新其它语言版本；标题/简介只在首次创建时复制，之后保留翻译版本自己的内容。 */
+function ew_product_sync_translations( $product_id ) {
+    if ( ! function_exists( 'pll_languages_list' ) || ! function_exists( 'pll_set_post_language' ) ) {
+        return array();
+    }
+
+    $product_id = absint( $product_id );
+    if ( ! $product_id || 'product' !== get_post_type( $product_id ) ) { return array(); }
+
+    $default = function_exists( 'pll_default_language' ) ? pll_default_language() : 'en';
+    $lang    = function_exists( 'pll_get_post_language' ) ? pll_get_post_language( $product_id ) : '';
+    if ( $lang && $lang !== $default ) {
+        $original = (int) pll_get_post( $product_id, $default );
+        if ( ! $original || 'product' !== get_post_type( $original ) ) { return array(); }
+        $product_id = $original;
+    }
+    if ( ! function_exists( 'pll_get_post_language' ) || ! pll_get_post_language( $product_id ) ) {
+        pll_set_post_language( $product_id, $default );
+    }
+
+    $source = get_post( $product_id );
+    if ( ! $source ) { return array(); }
+
+    // 变体商品暂不自动翻译：父级有翻译但变体没有会导致型号下拉为空
+    if ( function_exists( 'wc_get_product' ) ) {
+        $source_product = wc_get_product( $product_id );
+        if ( $source_product && $source_product->is_type( 'variable' ) ) {
+            return function_exists( 'pll_get_post_translations' ) ? (array) pll_get_post_translations( $product_id ) : array();
+        }
+    }
+
+    $languages = pll_languages_list();
+    if ( empty( $languages ) ) { return array(); }
+
+    $translations = function_exists( 'pll_get_post_translations' ) ? (array) pll_get_post_translations( $product_id ) : array();
+    $translations[ $default ] = $product_id;
+
+    $source_terms = wp_get_object_terms( $product_id, 'product_cat', array( 'fields' => 'ids' ) );
+    $source_terms = is_wp_error( $source_terms ) ? array() : array_map( 'intval', $source_terms );
+    $thumb        = (int) get_post_thumbnail_id( $product_id );
+    $meta_keys    = ew_product_translation_meta_keys();
+
+    foreach ( $languages as $target ) {
+        if ( $target === $default ) { continue; }
+
+        $trans_id = isset( $translations[ $target ] ) ? (int) $translations[ $target ] : 0;
+        if ( $trans_id && 'product' !== get_post_type( $trans_id ) ) { $trans_id = 0; }
+
+        if ( ! $trans_id ) {
+            // 翻译版本用「原 slug + 语言码」，和站点已有的 1805a-series-ru 命名一致，避免 -2/-3 后缀
+            $trans_slug = (string) $source->post_name;
+            if ( '' !== $trans_slug ) { $trans_slug .= '-' . sanitize_title( $target ); }
+            $trans_id = wp_insert_post( array(
+                'post_type'      => 'product',
+                'post_status'    => $source->post_status,
+                'post_title'     => $source->post_title,
+                'post_name'      => $trans_slug,
+                'post_content'   => $source->post_content,
+                'post_excerpt'   => $source->post_excerpt,
+                'post_author'    => $source->post_author,
+                'post_date'      => $source->post_date,
+                'menu_order'     => $source->menu_order,
+                'comment_status' => $source->comment_status,
+                'ping_status'    => $source->ping_status,
+            ), true );
+            if ( is_wp_error( $trans_id ) || ! $trans_id ) { continue; }
+            pll_set_post_language( $trans_id, $target );
+        } else {
+            if ( function_exists( 'pll_get_post_language' ) && pll_get_post_language( $trans_id ) !== $target ) {
+                pll_set_post_language( $trans_id, $target );
+            }
+            if ( $source->post_status !== get_post_status( $trans_id ) ) {
+                wp_update_post( array( 'ID' => $trans_id, 'post_status' => $source->post_status ) );
+            }
+        }
+
+        // 图片、参数、详情、首页推荐等共用数据
+        foreach ( $meta_keys as $key ) {
+            $value = get_post_meta( $product_id, $key, true );
+            if ( '' === $value || null === $value ) { delete_post_meta( $trans_id, $key ); }
+            else { update_post_meta( $trans_id, $key, wp_slash( $value ) ); }
+        }
+
+        if ( $thumb ) { set_post_thumbnail( $trans_id, $thumb ); }
+        else { delete_post_thumbnail( $trans_id ); }
+
+        // 分类：映射到目标语言的同名分类
+        $mapped = array();
+        foreach ( $source_terms as $term_id ) {
+            $t = function_exists( 'pll_get_term' ) ? pll_get_term( $term_id, $target ) : 0;
+            $mapped[] = $t ? (int) $t : (int) $term_id;
+        }
+        wp_set_object_terms( $trans_id, array_values( array_unique( array_filter( $mapped ) ) ), 'product_cat' );
+
+        $translations[ $target ] = $trans_id;
+    }
+
+    if ( function_exists( 'pll_save_post_translations' ) ) {
+        pll_save_post_translations( $translations );
+    }
+
+    return $translations;
+}
+
 /* ---------- 工具：AJAX 判断 / JSON 输出 / 字节解析 ---------- */
 function ew_import_is_ajax() {
     return isset( $_SERVER['HTTP_X_REQUESTED_WITH'] ) && strtolower( (string) $_SERVER['HTTP_X_REQUESTED_WITH'] ) === 'xmlhttprequest';
@@ -491,6 +613,11 @@ function ew_import_one_folder( $dir, $folder_name, $options ) {
     ew_import_apply_category( $prod_id, $cat_slug, ! empty( $options['cat_id'] ) ? (int) $options['cat_id'] : 0 );
     if ( ! empty( $options['hot'] ) ) {
         update_post_meta( $prod_id, 'product_hot', '1' );
+    }
+
+    // 多语言：同步到中文 / 西语 / 俄语 / 阿语版本
+    if ( ! empty( $options['sync_langs'] ) ) {
+        ew_product_sync_translations( $prod_id );
     }
 
     return array(
@@ -828,7 +955,7 @@ function ew_handle_product_import() {
     $ajax    = ew_import_is_ajax();
     $results = array();
     $error   = '';
-    $options = array( 'cat_id' => 0, 'cat_auto' => true, 'status' => 'publish', 'hot' => false, 'dry' => false );
+    $options = array( 'cat_id' => 0, 'cat_auto' => true, 'sync_langs' => true, 'status' => 'publish', 'hot' => false, 'dry' => false );
 
     // 超过 post_max_size 时 PHP 已把 POST/FILES 整体清空（连 nonce 都拿不到）→ 先给出明确提示
     if ( empty( $_FILES['ew_import_zip'] ) ) {
@@ -850,11 +977,12 @@ function ew_handle_product_import() {
         }
 
         $options = array(
-            'cat_id'   => isset( $_POST['ew_cat_id'] ) ? absint( $_POST['ew_cat_id'] ) : 0,
-            'cat_auto' => ! empty( $_POST['ew_cat_auto'] ),
-            'status'   => ( isset( $_POST['ew_status'] ) && 'draft' === $_POST['ew_status'] ) ? 'draft' : 'publish',
-            'hot'      => ! empty( $_POST['ew_hot'] ),
-            'dry'      => ! empty( $_POST['ew_dry'] ),
+            'cat_id'     => isset( $_POST['ew_cat_id'] ) ? absint( $_POST['ew_cat_id'] ) : 0,
+            'cat_auto'   => ! empty( $_POST['ew_cat_auto'] ),
+            'sync_langs' => ! empty( $_POST['ew_sync_langs'] ),
+            'status'     => ( isset( $_POST['ew_status'] ) && 'draft' === $_POST['ew_status'] ) ? 'draft' : 'publish',
+            'hot'        => ! empty( $_POST['ew_hot'] ),
+            'dry'        => ! empty( $_POST['ew_dry'] ),
         );
 
         // 分类对照表：表单提交后保存，后续导入自动沿用
@@ -940,6 +1068,13 @@ function ew_render_product_import() {
     if ( ! current_user_can( 'edit_products' ) ) { wp_die( '您没有权限。' ); }
     $cats = get_terms( array( 'taxonomy' => 'product_cat', 'hide_empty' => false ) );
     if ( is_wp_error( $cats ) ) { $cats = array(); }
+    $sync_lang_names = array();
+    if ( function_exists( 'pll_languages_list' ) ) {
+        $pll_default = function_exists( 'pll_default_language' ) ? pll_default_language() : '';
+        foreach ( (array) pll_languages_list( array( 'fields' => '' ) ) as $pll_lang ) {
+            if ( $pll_lang->slug !== $pll_default ) { $sync_lang_names[] = $pll_lang->name; }
+        }
+    }
     $notice  = '';
     $rows    = array();
     $expired = false;
@@ -1030,6 +1165,15 @@ function ew_render_product_import() {
                         <label><input type="radio" name="ew_status" value="draft"> 草稿</label>
                     </td>
                 </tr>
+                <?php if ( ! empty( $sync_lang_names ) ) : ?>
+                <tr>
+                    <th scope="row">多语言</th>
+                    <td>
+                        <label><input type="checkbox" name="ew_sync_langs" value="1" checked> 同时创建其它语言版本</label>
+                        <p class="description">会为每个商品自动创建：<?php echo esc_html( implode( ' / ', $sync_lang_names ) ); ?>。图片、参数、分类共用；标题和简介之后可在对应语言版本里单独修改。</p>
+                    </td>
+                </tr>
+                <?php endif; ?>
                 <tr>
                     <th scope="row">首页推荐</th>
                     <td><label><input type="checkbox" name="ew_hot" value="1"> 设为 Featured（首页 Featured Products 展示）</label></td>
