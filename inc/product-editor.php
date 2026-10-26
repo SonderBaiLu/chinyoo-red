@@ -241,6 +241,11 @@ function ew_studio_form( $product_id, $values, $is_new = false ) {
                 <label class="ew-field ew-field-wide"><span>商品名称</span><input type="text" name="product_title" value="<?php echo esc_attr( $values['title'] ); ?>" required></label>
                 <label class="ew-field"><span>产品型号</span><input type="text" name="product_model" value="<?php echo esc_attr( $values['model'] ); ?>" placeholder="例如：DT830L"></label>
                 <label class="ew-field"><span>商品状态</span><select name="product_status"><option value="publish" <?php selected( $status, 'publish' ); ?>>发布</option><option value="draft" <?php selected( $status, 'draft' ); ?>>草稿</option></select></label>
+                <div class="ew-field ew-field-wide">
+                    <span>首页 Featured 展示</span>
+                    <label class="ew-featured-toggle"><input type="checkbox" name="product_featured" value="1" <?php checked( ! empty( $values['featured'] ) ); ?>> 在首页 Featured Products 轮播中显示</label>
+                    <small class="ew-field-hint">只对「已发布」商品生效；首页最多显示 5 个，勾选超过 5 个时按发布日期取最新 5 个。</small>
+                </div>
                 <label class="ew-field ew-field-wide"><span>商品简介</span><textarea name="product_excerpt" rows="4" placeholder="核心卖点与简短介绍"><?php echo esc_textarea( $values['excerpt'] ); ?></textarea></label>
             </div>
             <?php if ( ! $is_new ) : ?><p class="ew-advanced-link">价格、库存、分类、SEO 等，请用 <a href="<?php echo esc_url( get_edit_post_link( $product_id ) ); ?>">WooCommerce 完整编辑页</a>。</p><?php endif; ?>
@@ -283,7 +288,7 @@ function ew_render_product_studio() {
         <?php if ( isset( $_GET['saved'] ) ) : ?><div class="notice notice-success is-dismissible"><p><strong>已保存。</strong>前台页面已使用最新内容。</p></div><?php endif; ?>
         <?php if ( isset( $_GET['deleted'] ) ) : ?><div class="notice notice-success is-dismissible"><p><strong>已删除 <?php echo (int) $_GET['deleted']; ?> 个商品</strong>（含图片附件与其它语言翻译，可在媒体库回收站恢复图片）。</p></div><?php endif; ?>
         <?php if ( $is_new ) : ?>
-            <?php ew_studio_form( 0, array( 'title' => '', 'model' => '', 'status' => 'publish', 'excerpt' => '' ), true ); ?>
+            <?php ew_studio_form( 0, array( 'title' => '', 'model' => '', 'status' => 'publish', 'excerpt' => '', 'featured' => false ), true ); ?>
         <?php elseif ( ! $product ) : ?>
             <form class="ew-studio-list" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
                 <input type="hidden" name="action" value="ew_product_bulk_delete">
@@ -299,12 +304,13 @@ function ew_render_product_studio() {
                     <button type="submit" class="button ew-bulk-delete" id="ew-bulk-delete" disabled><span class="dashicons dashicons-trash"></span>删除选中</button>
                 </div>
                 <div class="ew-product-grid" id="ew-product-grid">
-                    <?php foreach ( $products as $item ) : $thumb = ew_studio_thumb( $item->ID ); $model = get_post_meta( $item->ID, 'product_model', true ); ?>
+                    <?php foreach ( $products as $item ) : $thumb = ew_studio_thumb( $item->ID ); $model = get_post_meta( $item->ID, 'product_model', true ); $is_hot = ( '1' === (string) get_post_meta( $item->ID, 'product_hot', true ) ); ?>
                         <div class="ew-product-cell">
                             <label class="ew-product-check" title="选择"><input type="checkbox" class="ew-bulk-check" name="ids[]" value="<?php echo (int) $item->ID; ?>"></label>
-                            <a class="ew-product-card" data-name="<?php echo esc_attr( $item->post_title ); ?>" data-model="<?php echo esc_attr( $model ); ?>" href="<?php echo esc_url( ew_product_studio_url( $item->ID ) ); ?>">
+                            <a class="ew-product-card" data-name="<?php echo esc_attr( $item->post_title ); ?>" data-model="<?php echo esc_attr( $model ); ?>" data-hot="<?php echo $is_hot ? '1' : '0'; ?>" href="<?php echo esc_url( ew_product_studio_url( $item->ID ) ); ?>">
                                 <span class="ew-product-card__thumb"><?php echo $thumb ? wp_get_attachment_image( $thumb, 'thumbnail', false, array( 'loading' => 'lazy' ) ) : '<span class="dashicons dashicons-format-image ew-no-thumb"></span>'; ?></span>
                                 <span class="ew-product-card__body"><strong><?php echo esc_html( $item->post_title ?: '(未命名)' ); ?></strong><small><?php echo esc_html( $model ? $model : '#' . (int) $item->ID ); ?></small></span>
+                                <?php if ( $is_hot ) : ?><span class="ew-featured-badge" title="首页 Featured 轮播">首页</span><?php endif; ?>
                                 <span class="ew-status-badge<?php echo 'publish' === $item->post_status ? ' is-publish' : ''; ?>"><?php echo 'publish' === $item->post_status ? '已发布' : esc_html( get_post_status_object( $item->post_status )->label ); ?></span>
                             </a>
                         </div>
@@ -312,7 +318,7 @@ function ew_render_product_studio() {
                 </div>
             </form>
         <?php else : ?>
-            <?php ew_studio_form( $product_id, array( 'title' => $product->post_title, 'model' => get_post_meta( $product_id, 'product_model', true ), 'status' => $product->post_status, 'excerpt' => $product->post_excerpt ) ); ?>
+            <?php ew_studio_form( $product_id, array( 'title' => $product->post_title, 'model' => get_post_meta( $product_id, 'product_model', true ), 'status' => $product->post_status, 'excerpt' => $product->post_excerpt, 'featured' => ( '1' === (string) get_post_meta( $product_id, 'product_hot', true ) ) ) ); ?>
         <?php endif; ?>
     </div>
     <?php
@@ -336,6 +342,7 @@ add_action( 'admin_post_ew_product_studio_save', function () {
         check_admin_referer( 'ew_product_studio_save_0', 'ew_studio_nonce' );
         $id = wp_insert_post( array( 'post_type' => 'product', 'post_status' => 'draft', 'post_title' => $title !== '' ? $title : '未命名商品', 'post_excerpt' => $excerpt ) );
         if ( is_wp_error( $id ) ) { wp_die( '新建商品失败。' ); }
+        if ( function_exists( 'pll_set_post_language' ) && function_exists( 'pll_default_language' ) ) { pll_set_post_language( $id, pll_default_language() ); }
         if ( isset( $_POST['product_model'] ) ) { update_post_meta( $id, 'product_model', sanitize_text_field( wp_unslash( $_POST['product_model'] ) ) ); }
         $model_input = isset( $all['0'] ) && is_array( $all['0'] ) ? $all['0'] : array();
         if ( ! empty( $model_input['nonce'] ) && wp_verify_nonce( $model_input['nonce'], 'ew_model_0' ) ) { ew_apply_model_values( $id, $model_input ); }
@@ -363,6 +370,10 @@ add_action( 'admin_post_ew_product_studio_save', function () {
             update_post_meta( $id, '_model_detail_extras', wp_slash( wp_json_encode( $extras, JSON_UNESCAPED_UNICODE ) ) );
         }
     }
+
+    // 首页 Featured 轮播：只有勾选才写 product_hot=1，取消勾选即从首页移除
+    if ( ! empty( $_POST['product_featured'] ) ) { update_post_meta( $id, 'product_hot', '1' ); }
+    else { delete_post_meta( $id, 'product_hot' ); }
 
     if ( $status !== get_post_status( $id ) ) { wp_update_post( array( 'ID' => $id, 'post_status' => $status ) ); }
     wp_safe_redirect( add_query_arg( 'saved', '1', ew_product_studio_url( $id ) ) ); exit;

@@ -20,6 +20,9 @@
 .ew-product-card__body small{margin-top:5px;color:var(--ew-muted);font-size:12px}
 .ew-no-thumb{display:grid!important;place-items:center;color:#9aabc0;border-radius:6px;background:var(--ew-soft);font-size:26px!important}
 .ew-status-badge{flex:0 0 auto;padding:3px 9px;color:#177245;border-radius:99px;background:#e8f7ee;font-size:12px;white-space:nowrap}
+.ew-featured-badge{flex:0 0 auto;padding:3px 9px;color:#8a5a00;border-radius:99px;background:#fff2d6;font-size:12px;white-space:nowrap;font-weight:650}
+.ew-featured-toggle{display:inline-flex;align-items:center;gap:7px;font-weight:600}
+.ew-field-hint{color:#6b7789;font-size:12px;line-height:1.5}
 
 /* 编辑表单 */
 .ew-studio-form{margin-top:24px;padding-bottom:90px}
