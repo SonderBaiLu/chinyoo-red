@@ -597,6 +597,221 @@ function ew_import_process_zip( $zip_path, $label, $options, &$results, $depth =
     ew_import_rmdir( $extract_dir );
 }
 
+/* ---------- 异步导入任务：ZIP 先解压，随后每个型号单独一批处理 ----------
+   单次请求只处理少量型号，避免图片缩略图生成把 PHP-FPM 100 秒超时打爆。 */
+function ew_import_job_base_dir() {
+    $base = ew_import_temp_base();
+    if ( '' === $base ) { return ''; }
+    $dir = trailingslashit( $base ) . 'jobs';
+    if ( ! is_dir( $dir ) ) { @mkdir( $dir, 0755, true ); }
+    return ( is_dir( $dir ) && is_writable( $dir ) ) ? $dir : '';
+}
+
+function ew_import_cleanup_stale_jobs() {
+    $base = ew_import_job_base_dir();
+    if ( '' === $base ) { return; }
+    foreach ( (array) glob( $base . '/*' ) as $dir ) {
+        if ( is_dir( $dir ) && (int) @filemtime( $dir ) < time() - DAY_IN_SECONDS ) {
+            ew_import_rmdir( $dir );
+        }
+    }
+}
+
+/* 递归展开 ZIP：把型号文件夹 / 「暂不处理」文件夹 / 嵌套 ZIP 都变成队列项 */
+function ew_import_expand_zip_item( $zip_path, $label, $job_dir, $depth, &$queue, &$total ) {
+    $zip = new ZipArchive();
+    if ( true !== $zip->open( $zip_path ) ) {
+        $queue[] = array( 'type' => 'error', 'name' => $label, 'msg' => 'ZIP 无法打开' );
+        $total++;
+        return;
+    }
+
+    $extract_dir = trailingslashit( $job_dir ) . 'zip-' . wp_unique_id();
+    if ( ! @mkdir( $extract_dir, 0755, true ) ) {
+        $zip->close();
+        $queue[] = array( 'type' => 'error', 'name' => $label, 'msg' => '无法创建临时目录' );
+        $total++;
+        return;
+    }
+    if ( ! $zip->extractTo( $extract_dir ) ) {
+        $zip->close();
+        ew_import_rmdir( $extract_dir );
+        $queue[] = array( 'type' => 'error', 'name' => $label, 'msg' => '解压失败' );
+        $total++;
+        return;
+    }
+    $zip->close();
+
+    $root    = ew_import_resolve_root( $extract_dir );
+    $count   = 0;
+    $nested  = array();
+    foreach ( (array) @scandir( $root ) as $entry ) {
+        if ( '.' === $entry || '..' === $entry || '__MACOSX' === $entry ) { continue; }
+        $sub = $root . '/' . $entry;
+        if ( is_dir( $sub ) ) {
+            if ( preg_match( '/暂不处理/u', $entry ) ) {
+                $queue[] = array( 'type' => 'skip', 'name' => $entry, 'msg' => '文件夹名标注「暂不处理」，已跳过' );
+                $total++;
+                continue;
+            }
+            $queue[] = array( 'type' => 'folder', 'path' => $sub, 'name' => $entry );
+            $total++;
+            $count++;
+        } elseif ( $depth < 4 && is_file( $sub ) && 'zip' === strtolower( pathinfo( $sub, PATHINFO_EXTENSION ) ) ) {
+            $nested[] = $sub;
+        }
+    }
+
+    // 顶层直接是图片（无子文件夹、无嵌套 ZIP）→ 按 ZIP 名当一个型号
+    if ( 0 === $count ) {
+        $has_top = false;
+        foreach ( (array) @scandir( $root ) as $e ) {
+            if ( ew_import_is_image( $e ) ) { $has_top = true; break; }
+        }
+        if ( $has_top || empty( $nested ) ) {
+            $queue[] = array( 'type' => 'folder', 'path' => $root, 'name' => $label );
+            $total++;
+        }
+    }
+
+    foreach ( $nested as $nz ) {
+        ew_import_expand_zip_item( $nz, pathinfo( $nz, PATHINFO_FILENAME ), $job_dir, $depth + 1, $queue, $total );
+    }
+}
+
+function ew_import_create_job( $zips, $options ) {
+    ew_import_cleanup_stale_jobs();
+    $base = ew_import_job_base_dir();
+    if ( '' === $base ) {
+        return new WP_Error( 'ew_import_temp', '无法创建临时目录（uploads 不可写）。' );
+    }
+
+    $job_id  = strtolower( wp_generate_password( 24, false, false ) );
+    $job_dir = trailingslashit( $base ) . $job_id;
+    if ( ! @mkdir( $job_dir, 0755, true ) ) {
+        return new WP_Error( 'ew_import_temp', '无法创建任务目录：' . $job_dir );
+    }
+
+    $queue = array();
+    $total = 0;
+    $saved = 0;
+    foreach ( $zips as $z ) {
+        $dest = $job_dir . '/source-' . wp_unique_id() . '.zip';
+        $ok   = @move_uploaded_file( $z['tmp'], $dest );
+        if ( ! $ok ) { $ok = @copy( $z['tmp'], $dest ); }
+        if ( ! $ok ) {
+            $queue[] = array( 'type' => 'error', 'name' => $z['name'], 'msg' => '上传文件保存失败，请重试' );
+            $total++;
+            continue;
+        }
+        $saved++;
+        ew_import_expand_zip_item( $dest, pathinfo( $z['name'], PATHINFO_FILENAME ), $job_dir, 1, $queue, $total );
+    }
+
+    if ( 0 === $saved ) {
+        ew_import_rmdir( $job_dir );
+        return new WP_Error( 'ew_import_temp', 'ZIP 文件保存失败，请重试。' );
+    }
+    if ( 0 === $total ) {
+        $queue[] = array( 'type' => 'error', 'name' => 'ZIP', 'msg' => '没有找到型号文件夹或图片' );
+        $total   = 1;
+    }
+
+    $job = array(
+        'id'           => $job_id,
+        'user_id'      => get_current_user_id(),
+        'options'      => $options,
+        'queue'        => $queue,
+        'index'        => 0,
+        'total_models' => $total,
+        'done_models'  => 0,
+        'results'      => array(),
+        'dir'          => $job_dir,
+        'created'      => time(),
+    );
+    set_transient( 'ew_import_job_' . $job_id, $job, 12 * HOUR_IN_SECONDS );
+    return $job;
+}
+
+/* 处理一批型号：最多跑 $max_seconds 秒，返回更新后的任务 */
+function ew_import_run_job_batch( $job, $max_seconds = 35 ) {
+    $start = microtime( true );
+    $count = count( $job['queue'] );
+
+    while ( $job['index'] < $count ) {
+        if ( microtime( true ) - $start >= $max_seconds ) { break; }
+
+        $item = $job['queue'][ $job['index'] ];
+        if ( 'skip' === $item['type'] ) {
+            $result = array( 'name' => $item['name'], 'ok' => false, 'skip' => true, 'msg' => $item['msg'], 'url' => '' );
+        } elseif ( 'error' === $item['type'] ) {
+            $result = array( 'name' => $item['name'], 'ok' => false, 'msg' => $item['msg'], 'url' => '' );
+        } else {
+            try {
+                $result = ew_import_one_folder( $item['path'], $item['name'], $job['options'] );
+            } catch ( Throwable $e ) {
+                $result = array( 'name' => $item['name'], 'ok' => false, 'msg' => '处理失败：' . $e->getMessage(), 'url' => '' );
+            }
+        }
+
+        $job['results'][] = $result;
+        $job['done_models']++;
+        $job['index']++;
+    }
+
+    $job['done'] = ( $job['index'] >= count( $job['queue'] ) );
+    return $job;
+}
+
+function ew_import_job_finish( $job ) {
+    if ( ! empty( $job['dir'] ) ) { ew_import_rmdir( $job['dir'] ); }
+    if ( ! empty( $job['id'] ) ) { delete_transient( 'ew_import_job_' . $job['id'] ); }
+}
+
+/* AJAX 分批处理入口：每次只跑一小批，前端轮询进度 */
+function ew_handle_product_import_process() {
+    if ( ! current_user_can( 'edit_products' ) ) {
+        ew_import_json_exit( array( 'ok' => false, 'error' => '无权限' ) );
+    }
+    $nonce = isset( $_REQUEST['ew_import_nonce'] ) ? $_REQUEST['ew_import_nonce'] : '';
+    if ( ! wp_verify_nonce( $nonce, 'ew_product_import' ) ) {
+        ew_import_json_exit( array( 'ok' => false, 'error' => '安全校验失败，请刷新页面后重试。' ) );
+    }
+
+    $job_id = isset( $_POST['job'] ) ? sanitize_key( $_POST['job'] ) : '';
+    $job    = $job_id ? get_transient( 'ew_import_job_' . $job_id ) : false;
+    if ( ! is_array( $job ) || empty( $job['user_id'] ) || (int) $job['user_id'] !== get_current_user_id() ) {
+        ew_import_json_exit( array( 'ok' => false, 'expired' => true, 'error' => '导入任务已过期，请重新上传 ZIP。' ) );
+    }
+
+    @set_time_limit( 0 );
+    @ini_set( 'memory_limit', '512M' );
+    require_once ABSPATH . 'wp-admin/includes/file.php';
+    require_once ABSPATH . 'wp-admin/includes/media.php';
+    require_once ABSPATH . 'wp-admin/includes/image.php';
+
+    $job  = ew_import_run_job_batch( $job, 35 );
+    $done = ! empty( $job['done'] );
+    $last = ! empty( $job['results'] ) ? end( $job['results'] ) : null;
+
+    $payload = array(
+        'ok'           => true,
+        'done'         => $done,
+        'done_models'  => (int) $job['done_models'],
+        'total_models' => (int) $job['total_models'],
+        'results'      => array_values( $job['results'] ),
+        'current'      => ( $last && isset( $last['name'] ) ) ? (string) $last['name'] : '',
+        'dry'          => ! empty( $job['options']['dry'] ),
+        'error'        => '',
+    );
+
+    if ( $done ) { ew_import_job_finish( $job ); }
+    else { set_transient( 'ew_import_job_' . $job['id'], $job, 12 * HOUR_IN_SECONDS ); }
+
+    ew_import_json_exit( $payload );
+}
+add_action( 'admin_post_ew_product_import_process', 'ew_handle_product_import_process' );
+
 /* ---------- 主处理：解压 ZIP 并逐文件夹导入 ---------- */
 function ew_handle_product_import() {
     if ( ! current_user_can( 'edit_products' ) ) {
@@ -671,6 +886,20 @@ function ew_handle_product_import() {
             if ( '' === $error ) { $error = '没有可选的 ZIP 文件（上传失败或文件不存在）。'; }
         } elseif ( ! class_exists( 'ZipArchive' ) ) {
             $error = '服务器缺少 ZipArchive 扩展，无法解压。';
+        } elseif ( $ajax ) {
+            // 只解压并建任务，图片处理交给后续分批请求，避免 100 秒超时
+            $job = ew_import_create_job( $real, $options );
+            if ( is_wp_error( $job ) ) {
+                $error = $job->get_error_message();
+            } else {
+                ew_import_json_exit( array(
+                    'ok'           => true,
+                    'job'          => $job['id'],
+                    'total_models' => (int) $job['total_models'],
+                    'results'      => array(),
+                    'dry'          => ! empty( $options['dry'] ),
+                ) );
+            }
         } else {
             foreach ( $real as $z ) {
                 ew_import_process_zip( $z['tmp'], pathinfo( $z['name'], PATHINFO_FILENAME ), $options, $results );
@@ -826,6 +1055,11 @@ function ew_render_product_import() {
             <p id="ew-progress-text" style="margin-top:8px;color:#505759"></p>
         </div>
 
+        <p id="ew-import-resume-wrap" style="display:none;max-width:680px">
+            <button type="button" class="button button-primary" id="ew-import-resume">继续导入</button>
+            <span class="description">从上次完成的型号继续，不会重复建商品。</span>
+        </p>
+
         <div id="ew-live-results" style="max-width:960px"></div>
 
         <script>
@@ -834,50 +1068,135 @@ function ew_render_product_import() {
             if (!form) { return; }
             var fileInput = form.querySelector('input[type=file]');
             var btn = document.getElementById('ew-import-btn');
+            var resumeBtn = document.getElementById('ew-import-resume');
+            var resumeWrap = document.getElementById('ew-import-resume-wrap');
             var bar = document.getElementById('ew-progress');
             var fill = document.getElementById('ew-progress-fill');
             var txt = document.getElementById('ew-progress-text');
             var out = document.getElementById('ew-live-results');
-            var t0 = 0;
+            var t0 = 0, jobId = '', nonce = '', allResults = [], dry = false;
+
             function esc(s) {
                 return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
                     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
                 });
             }
             function mb(b) { return (b / 1048576).toFixed(1) + ' MB'; }
-            function paint(data) {
+
+            function countResults() {
                 var ok = 0, skip = 0, fail = 0;
-                (data.results || []).forEach(function (r) {
+                allResults.forEach(function (r) {
                     if (r.skip) { skip++; } else if (r.ok) { ok++; } else { fail++; }
                 });
-                var html = '';
-                if (data.error) {
-                    html = '<div class="notice notice-error is-dismissible"><p>' + esc(data.error) + '</p></div>';
-                } else if (data.results && data.results.length) {
-                    var head = '<p><strong>' + (data.dry ? '试运行完成（未建商品）：可识别 ' : '导入完成：成功 ') + ok + ' 个';
-                    if (skip) { head += '，跳过 ' + skip + ' 个（重复/标注）'; }
-                    if (fail) { head += '，失败 ' + fail + ' 个'; }
-                    html = '<div class="notice ' + (data.dry ? 'notice-info' : 'notice-success') + ' is-dismissible"><p>' + head + '（见下表）。</p></div>';
-                }
-                if (data.results && data.results.length) {
-                    html += '<h2>本次导入结果</h2><table class="widefat striped" style="max-width:960px"><thead><tr><th>型号</th><th>状态</th><th>分类</th><th>图片</th><th>链接</th></tr></thead><tbody>';
-                    data.results.forEach(function (r) {
-                        var st = r.skip ? '<span style="color:#2271ae">跳过</span> · ' + esc(r.msg)
-                            : r.ok ? '<span style="color:#00a32a">成功</span>'
-                            : '<span style="color:#d63638">失败</span> · ' + esc(r.msg);
-                        var img = r.ok && !r.skip ? esc(r.msg) : '';
-                        var link = '';
-                        if (r.url) { link += '<a href="' + esc(r.url) + '" target="_blank">查看</a>&nbsp;'; }
-                        if (r.edit) { link += '<a href="' + esc(r.edit) + '">编辑</a>'; }
-                        html += '<tr><td>' + esc(r.name) + '</td><td>' + st + '</td><td>' + (r.cat ? esc(r.cat) : '<span style="color:#d63638">未识别</span>') + '</td><td>' + img + '</td><td>' + link + '</td></tr>';
-                    });
-                    html += '</tbody></table>';
-                }
-                out.innerHTML = html;
+                return { ok: ok, skip: skip, fail: fail };
             }
+
+            function tableHtml() {
+                if (!allResults.length) { return ''; }
+                var html = '<h2>本次导入结果</h2><table class="widefat striped" style="max-width:960px"><thead><tr><th>型号</th><th>状态</th><th>分类</th><th>图片</th><th>链接</th></tr></thead><tbody>';
+                allResults.forEach(function (r) {
+                    var st = r.skip ? '<span style="color:#2271ae">跳过</span> · ' + esc(r.msg)
+                        : r.ok ? '<span style="color:#00a32a">成功</span>'
+                        : '<span style="color:#d63638">失败</span> · ' + esc(r.msg);
+                    var img = r.ok && !r.skip ? esc(r.msg) : '';
+                    var link = '';
+                    if (r.url) { link += '<a href="' + esc(r.url) + '" target="_blank">查看</a>&nbsp;'; }
+                    if (r.edit) { link += '<a href="' + esc(r.edit) + '">编辑</a>'; }
+                    html += '<tr><td>' + esc(r.name) + '</td><td>' + st + '</td><td>' + (r.cat ? esc(r.cat) : '<span style="color:#d63638">未识别</span>') + '</td><td>' + img + '</td><td>' + link + '</td></tr>';
+                });
+                return html + '</tbody></table>';
+            }
+
+            function paint(complete) {
+                var c = countResults(), html = '';
+                if (complete) {
+                    if (!allResults.length) {
+                        html = '<div class="notice notice-info"><p>没有可导入的型号。</p></div>';
+                    } else {
+                        var label = dry ? '试运行完成（未建商品）：可识别 ' : '导入完成：成功 ';
+                        var head = '<p><strong>' + label + c.ok + ' 个';
+                        if (c.skip) { head += '，跳过 ' + c.skip + ' 个（重复/标注）'; }
+                        if (c.fail) { head += '，失败 ' + c.fail + ' 个'; }
+                        head += '（见下表）。</p>';
+                        html = '<div class="notice ' + (dry ? 'notice-info' : (c.fail ? 'notice-warning' : 'notice-success')) + ' is-dismissible">' + head + '</div>';
+                    }
+                } else if (allResults.length) {
+                    html = '<div class="notice notice-info"><p><strong>服务器处理中：</strong>已处理 ' + allResults.length + ' 个型号（成功 ' + c.ok + ' / 跳过 ' + c.skip + ' / 失败 ' + c.fail + '）。</p></div>';
+                }
+                out.innerHTML = html + tableHtml();
+            }
+
+            function setProgress(done, total, label) {
+                if (total > 0) {
+                    var pct = Math.min(100, Math.round(done * 100 / total));
+                    fill.style.width = pct + '%';
+                    txt.textContent = '服务器处理中：' + done + ' / ' + total + ' 个型号' + (label ? '（' + label + '）' : '');
+                } else {
+                    fill.style.width = '5%';
+                    txt.textContent = label || '服务器正在解压 ZIP…';
+                }
+            }
+
+            function showError(msg, canResume) {
+                btn.disabled = false;
+                if (resumeBtn) { resumeBtn.disabled = false; }
+                txt.textContent = msg;
+                resumeWrap.style.display = canResume ? 'block' : 'none';
+                out.innerHTML = '<div class="notice notice-error is-dismissible"><p>' + esc(msg) + '</p></div>' + tableHtml();
+            }
+
+            function parseJson(xhr) {
+                try { return JSON.parse(xhr.responseText); } catch (e) { return null; }
+            }
+
+            function processNext() {
+                if (!jobId) { return; }
+                resumeWrap.style.display = 'none';
+                if (resumeBtn) { resumeBtn.disabled = true; }
+                var fd = new FormData();
+                fd.append('action', 'ew_product_import_process');
+                fd.append('job', jobId);
+                fd.append('ew_import_nonce', nonce);
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', form.getAttribute('action'), true);
+                xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                xhr.onload = function () {
+                    var data = parseJson(xhr);
+                    if (!data) {
+                        showError('服务器返回异常（' + xhr.status + '）：' + String(xhr.responseText || '').slice(0, 200) + '。已处理 ' + allResults.length + ' 个型号，可点击「继续导入」从断点继续。', true);
+                        return;
+                    }
+                    if (data.error) {
+                        showError(data.error, false);
+                        return;
+                    }
+                    allResults = data.results || allResults;
+                    dry = !!data.dry;
+                    setProgress(data.done_models, data.total_models, data.current);
+                    paint(!!data.done);
+                    if (data.done) {
+                        fill.style.width = '100%';
+                        txt.textContent = '处理完成，共 ' + allResults.length + ' 个型号。';
+                        btn.disabled = false;
+                        if (resumeBtn) { resumeBtn.disabled = false; }
+                        return;
+                    }
+                    processNext();
+                };
+                xhr.onerror = function () {
+                    showError('服务器连接中断。已处理 ' + allResults.length + ' 个型号，可点击「继续导入」从断点继续。', true);
+                };
+                xhr.send(fd);
+            }
+
             form.addEventListener('submit', function (e) {
                 if (!fileInput.files || !fileInput.files.length) { return; }
                 e.preventDefault();
+                jobId = '';
+                allResults = [];
+                dry = false;
+                nonce = form.querySelector('[name="ew_import_nonce"]').value;
+                resumeWrap.style.display = 'none';
                 var fd = new FormData(form);
                 var xhr = new XMLHttpRequest();
                 btn.disabled = true;
@@ -896,27 +1215,49 @@ function ew_render_product_import() {
                     }
                 };
                 xhr.upload.onload = function () {
-                    fill.style.width = '100%';
-                    txt.textContent = '上传完成，服务器处理中（解压、建商品、生成缩略图），大 ZIP 可能需要几分钟…';
+                    fill.style.width = '5%';
+                    txt.textContent = '上传完成，服务器正在解压 ZIP…';
                 };
                 xhr.onload = function () {
-                    var data = null;
-                    try { data = JSON.parse(xhr.responseText); } catch (err) {}
+                    var data = parseJson(xhr);
                     var secs = ((Date.now() - t0) / 1000).toFixed(1);
                     if (!data) {
-                        txt.textContent = '服务器返回异常（' + secs + ' 秒）：' + String(xhr.responseText || '').slice(0, 200);
-                        btn.disabled = false;
+                        showError('服务器返回异常（' + secs + ' 秒）：' + String(xhr.responseText || '').slice(0, 200), false);
                         return;
                     }
+                    if (data.error) {
+                        showError(data.error, false);
+                        return;
+                    }
+                    if (data.job) {
+                        jobId = data.job;
+                        dry = !!data.dry;
+                        fill.style.width = '5%';
+                        txt.textContent = '服务器正在解压 ZIP…';
+                        processNext();
+                        return;
+                    }
+                    // 兼容旧的非任务响应
+                    allResults = data.results || [];
+                    dry = !!data.dry;
+                    paint(true);
+                    fill.style.width = '100%';
                     txt.textContent = '处理完成，用时 ' + secs + ' 秒。';
-                    paint(data);
                     btn.disabled = false;
                 };
-                xhr.onerror = function () { txt.textContent = '上传失败（网络错误）。'; btn.disabled = false; };
+                xhr.onerror = function () { showError('上传失败（网络错误）。', false); };
                 xhr.open('POST', form.getAttribute('action'), true);
                 xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
                 xhr.send(fd);
             });
+
+            if (resumeBtn) {
+                resumeBtn.addEventListener('click', function () {
+                    if (!jobId) { return; }
+                    resumeWrap.style.display = 'none';
+                    processNext();
+                });
+            }
         })();
         </script>
 
