@@ -65,7 +65,7 @@ function ew_import_classify( $file_name ) {
 
     // 详情长图（可带语言标识）
     $is_detail = false;
-    foreach ( array( '详细参数图', '详细参数', '详细信息图', '详细信息', '详细页', '详细数据', '详情图', '详情', '参数页', '参数图', '信息图' ) as $kw ) {
+    foreach ( array( '详细参数图', '详细参数', '详细信息图', '详细信息', '详细页', '详细图', '详细数据', '详情图', '详情', '参数页', '参数图', '信息图' ) as $kw ) {
         if ( false !== mb_strpos( $base, $kw ) ) { $is_detail = true; break; }
     }
     if ( ! $is_detail && preg_match( '/product[_\-\s]?detail/i', $base ) ) { $is_detail = true; }
@@ -98,6 +98,155 @@ function ew_import_classify( $file_name ) {
 function ew_import_is_image( $file ) {
     $ext = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
     return in_array( $ext, array( 'jpg', 'jpeg', 'png', 'webp', 'gif' ), true );
+}
+
+/* ---------- 工具：按型号判产品分类 ----------
+   规则顺序有讲究：电池/插座 → 钳形 → 测电笔 → 万用表 → 温度，避免「钳形表详情里提到 voltage」这类误判。 */
+function ew_import_category_rules() {
+    return array(
+        'battery-meters'           => '/battery\s*(meter|tester)|电池测试|电池容量/i',
+        'socket-testers'           => '/socket\s*tester|插座测试|插座检测/i',
+        'digital-clamp-meters'     => '/clamp\s*meter|钳形|钳表|电流钳/i',
+        'digital-voltage-testers'  => '/voltage\s*(tester|pen|detector)|测电笔|试电笔|电笔|验电笔/i',
+        'digital-multimeters'      => '/multimeter|万用表/i',
+        'others'                   => '/temperature|thermometer|hygrometer|测温|温度|温湿度/i',
+    );
+}
+
+/* 叶子分类 → 父级分类：两个都挂，父级分类页也能显示商品 */
+function ew_import_category_parents() {
+    return array(
+        'battery-meters'          => 'others',
+        'socket-testers'          => 'others',
+        'digital-clamp-meters'    => 'clamp-meters',
+        'digital-voltage-testers' => 'voltage-testers',
+    );
+}
+
+function ew_import_category_from_text( $text ) {
+    $text = trim( (string) $text );
+    if ( '' === $text ) { return ''; }
+    foreach ( ew_import_category_rules() as $slug => $pattern ) {
+        if ( preg_match( $pattern, $text ) ) { return $slug; }
+    }
+    return '';
+}
+
+/* info.json / 参数c.json 的 name·model，以及 生成记录.txt 的前几百字 */
+function ew_import_read_meta_text( $dir ) {
+    $chunks = array();
+    foreach ( (array) glob( $dir . '/*.json' ) as $file ) {
+        $raw = @file_get_contents( $file );
+        if ( false === $raw ) { continue; }
+        $raw  = preg_replace( '/^\xEF\xBB\xBF/', '', $raw );
+        $data = json_decode( $raw, true );
+        if ( is_array( $data ) ) {
+            foreach ( array( 'name', 'model', 'title', 'product_name' ) as $key ) {
+                if ( isset( $data[ $key ] ) && is_string( $data[ $key ] ) ) { $chunks[] = $data[ $key ]; }
+            }
+        } else {
+            $chunks[] = mb_substr( $raw, 0, 300 );
+        }
+    }
+    foreach ( (array) glob( $dir . '/*.txt' ) as $file ) {
+        $raw = @file_get_contents( $file );
+        if ( false !== $raw ) { $chunks[] = mb_substr( $raw, 0, 600 ); }
+    }
+    return implode( ' ', $chunks );
+}
+
+/* 强制指定：文件夹里放 分类.txt（一行分类名 / 中文名 / slug）时优先采用 */
+function ew_import_read_category_file( $dir ) {
+    foreach ( array( '分类.txt', '分类.md' ) as $name ) {
+        $file = $dir . '/' . $name;
+        if ( ! is_file( $file ) ) { continue; }
+        $raw = @file_get_contents( $file );
+        if ( false === $raw ) { continue; }
+        $raw  = trim( preg_replace( '/^\xEF\xBB\xBF/', '', $raw ) );
+        if ( '' === $raw ) { continue; }
+        $line = trim( (string) strtok( $raw, "\r\n" ) );
+
+        $slug = ew_import_resolve_category( $line );
+        if ( '' !== $slug ) { return $slug; }
+    }
+    return '';
+}
+
+/* 把「分类名 / 中文名 / slug / 关键词」统一解析成 product_cat slug */
+function ew_import_resolve_category( $value ) {
+    $value = trim( (string) $value );
+    if ( '' === $value ) { return ''; }
+    if ( preg_match( '/^(待定|未定|\?|？|-|none)$/ui', $value ) ) { return ''; }
+
+    $term = get_term_by( 'slug', sanitize_title( $value ), 'product_cat' );
+    if ( $term && ! is_wp_error( $term ) ) { return $term->slug; }
+    $term = get_term_by( 'name', $value, 'product_cat' );
+    if ( $term && ! is_wp_error( $term ) ) { return $term->slug; }
+    return ew_import_category_from_text( $value );
+}
+
+/* 分类对照表（后台保存的文本）：每行「型号 = 分类」，支持 # 注释 */
+function ew_import_parse_category_map( $text ) {
+    $map = array();
+    if ( ! is_string( $text ) || '' === trim( $text ) ) { return $map; }
+    foreach ( preg_split( '/\r\n|\r|\n/', $text ) as $line ) {
+        $line = trim( $line );
+        if ( '' === $line || '#' === $line[0] ) { continue; }
+        if ( ! preg_match( '/^(.+?)\s*[=,，:：|\t]\s*(.+)$/u', $line, $m ) ) { continue; }
+        $model = trim( $m[1] );
+        if ( '' === $model ) { continue; }
+        $slug = ew_import_resolve_category( $m[2] );
+        if ( '' === $slug ) { continue; }
+        $map[ mb_strtolower( $model ) ] = $slug;
+    }
+    return $map;
+}
+
+function ew_import_category_map() {
+    static $map = null;
+    if ( null === $map ) {
+        $map = ew_import_parse_category_map( (string) get_option( 'ew_import_category_map', '' ) );
+    }
+    return $map;
+}
+
+/* 判定顺序：分类对照表 → 文件夹里的 分类.txt → 文件夹名 → info.json/生成记录 */
+function ew_import_detect_category( $dir, $folder_name, $cat_map = array() ) {
+    if ( empty( $cat_map ) ) { $cat_map = ew_import_category_map(); }
+    $key = mb_strtolower( trim( (string) $folder_name ) );
+    if ( '' !== $key && ! empty( $cat_map[ $key ] ) ) { return $cat_map[ $key ]; }
+
+    $slug = ew_import_read_category_file( $dir );
+    if ( '' !== $slug ) { return $slug; }
+    $slug = ew_import_category_from_text( $folder_name );
+    if ( '' !== $slug ) { return $slug; }
+    return ew_import_category_from_text( ew_import_read_meta_text( $dir ) );
+}
+
+function ew_import_apply_category( $product_id, $slug, $fallback_id = 0 ) {
+    $slugs = array();
+    if ( '' !== $slug ) {
+        $slugs[] = $slug;
+        $parents = ew_import_category_parents();
+        if ( isset( $parents[ $slug ] ) ) { $slugs[] = $parents[ $slug ]; }
+    }
+
+    $ids = array();
+    foreach ( $slugs as $s ) {
+        $term = get_term_by( 'slug', $s, 'product_cat' );
+        if ( $term && ! is_wp_error( $term ) ) { $ids[] = (int) $term->term_id; }
+    }
+    if ( empty( $ids ) && $fallback_id ) { $ids[] = (int) $fallback_id; }
+    $ids = array_values( array_unique( array_filter( $ids ) ) );
+
+    if ( ! empty( $ids ) ) { wp_set_object_terms( $product_id, $ids, 'product_cat' ); }
+    return $ids;
+}
+
+function ew_import_category_label( $slug ) {
+    if ( '' === $slug ) { return ''; }
+    $term = get_term_by( 'slug', $slug, 'product_cat' );
+    return ( $term && ! is_wp_error( $term ) ) ? $term->name : $slug;
 }
 
 /* ---------- 工具：AJAX 判断 / JSON 输出 / 字节解析 ---------- */
@@ -237,9 +386,13 @@ function ew_import_one_folder( $dir, $folder_name, $options ) {
     foreach ( $scene as $group ) { $scene_total += count( $group ); }
     $summary = sprintf( '主图 %d · 画廊 %d · 详情 en %d / cn %d · 场景 %d', count( $main ), $gallery_total, count( $detail_en ), count( $detail_cn ), $scene_total );
 
+    // 分类：对照表 → 分类.txt → 文件夹名 → info.json/生成记录
+    $cat_slug  = ! empty( $options['cat_auto'] ) ? ew_import_detect_category( $dir, $folder_name ) : '';
+    $cat_label = ew_import_category_label( $cat_slug );
+
     // 试运行：只统计不落库
     if ( ! empty( $options['dry'] ) ) {
-        return array( 'name' => $folder_name, 'ok' => true, 'msg' => $summary, 'url' => '' );
+        return array( 'name' => $folder_name, 'ok' => true, 'msg' => $summary, 'cat' => $cat_label, 'url' => '' );
     }
 
     // 重复检查：同 SKU 已存在则跳过，不重复创建
@@ -334,10 +487,8 @@ function ew_import_one_folder( $dir, $folder_name, $options ) {
         update_post_meta( $prod_id, '_model_detail_images', wp_json_encode( $detail_map, JSON_UNESCAPED_UNICODE ) );
     }
 
-    // 分类 / 首页推荐
-    if ( ! empty( $options['cat_id'] ) ) {
-        wp_set_object_terms( $prod_id, array( (int) $options['cat_id'] ), 'product_cat' );
-    }
+    // 分类：自动识别优先，识别不到用表单手选的分类
+    ew_import_apply_category( $prod_id, $cat_slug, ! empty( $options['cat_id'] ) ? (int) $options['cat_id'] : 0 );
     if ( ! empty( $options['hot'] ) ) {
         update_post_meta( $prod_id, 'product_hot', '1' );
     }
@@ -346,6 +497,7 @@ function ew_import_one_folder( $dir, $folder_name, $options ) {
         'name' => $folder_name,
         'ok'   => true,
         'msg'  => $summary,
+        'cat'  => $cat_label,
         'url'  => get_permalink( $prod_id ),
         'edit' => get_edit_post_link( $prod_id ),
     );
@@ -461,7 +613,7 @@ function ew_handle_product_import() {
     $ajax    = ew_import_is_ajax();
     $results = array();
     $error   = '';
-    $options = array( 'cat_id' => 0, 'status' => 'publish', 'hot' => false, 'dry' => false );
+    $options = array( 'cat_id' => 0, 'cat_auto' => true, 'status' => 'publish', 'hot' => false, 'dry' => false );
 
     // 超过 post_max_size 时 PHP 已把 POST/FILES 整体清空（连 nonce 都拿不到）→ 先给出明确提示
     if ( empty( $_FILES['ew_import_zip'] ) ) {
@@ -483,11 +635,17 @@ function ew_handle_product_import() {
         }
 
         $options = array(
-            'cat_id' => isset( $_POST['ew_cat_id'] ) ? absint( $_POST['ew_cat_id'] ) : 0,
-            'status' => ( isset( $_POST['ew_status'] ) && 'draft' === $_POST['ew_status'] ) ? 'draft' : 'publish',
-            'hot'    => ! empty( $_POST['ew_hot'] ),
-            'dry'    => ! empty( $_POST['ew_dry'] ),
+            'cat_id'   => isset( $_POST['ew_cat_id'] ) ? absint( $_POST['ew_cat_id'] ) : 0,
+            'cat_auto' => ! empty( $_POST['ew_cat_auto'] ),
+            'status'   => ( isset( $_POST['ew_status'] ) && 'draft' === $_POST['ew_status'] ) ? 'draft' : 'publish',
+            'hot'      => ! empty( $_POST['ew_hot'] ),
+            'dry'      => ! empty( $_POST['ew_dry'] ),
         );
+
+        // 分类对照表：表单提交后保存，后续导入自动沿用
+        if ( isset( $_POST['ew_cat_map'] ) && is_string( $_POST['ew_cat_map'] ) ) {
+            update_option( 'ew_import_category_map', wp_unslash( $_POST['ew_cat_map'] ), false );
+        }
 
         // 收集上传的 ZIP（支持多选：ew_import_zip[] ；兼容单文件 ew_import_zip）
         $zips = array();
@@ -616,7 +774,15 @@ function ew_render_product_import() {
                     <td><input type="file" name="ew_import_zip[]" accept=".zip" multiple required><p class="description">可一次选择多个 ZIP（例如把大素材拆成几个包，避开单文件 300M 上限）。</p></td>
                 </tr>
                 <tr>
-                    <th scope="row">产品分类</th>
+                    <th scope="row">自动分类</th>
+                    <td>
+                        <label><input type="checkbox" name="ew_cat_auto" value="1" checked> 按型号自动识别产品分类</label>
+                        <p class="description">识别依据：文件夹名（如 <code>144_VC16B digital multimeter</code>）→ <code>info.json</code> 的 name → <code>生成记录.txt</code>。
+                        可识别：万用表 / 钳形表 / 测电笔 / 温度计 / 电池测试仪 / 插座测试仪。想在单个文件夹里强制指定，就放一个 <code>分类.txt</code>，写一行分类名（如「钳形表」或 <code>clamp-meters</code>）。</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">兜底分类</th>
                     <td>
                         <select name="ew_cat_id">
                             <option value="0">不分类</option>
@@ -624,6 +790,7 @@ function ew_render_product_import() {
                                 <option value="<?php echo (int) $c->term_id; ?>"><?php echo esc_html( $c->name ); ?></option>
                             <?php endforeach; ?>
                         </select>
+                        <p class="description">自动识别不出来的型号，统一挂到这里；关掉「自动分类」时所有型号都用这个分类。</p>
                     </td>
                 </tr>
                 <tr>
@@ -641,6 +808,14 @@ function ew_render_product_import() {
                 <tr>
                     <th scope="row">试运行</th>
                     <td><label><input type="checkbox" name="ew_dry" value="1"> 只统计不建商品（先看识别结果再正式导入）</label></td>
+                </tr>
+                <tr>
+                    <th scope="row">分类对照表</th>
+                    <td>
+                        <textarea name="ew_cat_map" rows="8" style="width:100%;max-width:520px;font-family:monospace" placeholder="# 每行一个型号，格式：型号 = 分类&#10;# 分类可写中文名，例如：&#10;#   DM9205A = 万用表&#10;#   VT811 = 测电笔&#10;#   XT802 = 钳形表"><?php echo esc_textarea( (string) get_option( 'ew_import_category_map', '' ) ); ?></textarea>
+                        <p class="description">型号 = 文件夹名（SKU）。这里配置的优先级最高，适合没有文字信息的纯数字型号（如 <code>605</code>、<code>646</code>）。保存后自动记住，下次导入沿用。<br>
+                        可写分类：<code>万用表</code> · <code>钳形表</code> · <code>测电笔</code> · <code>温度计</code> · <code>电池测试仪</code> · <code>插座测试仪</code>；不写 <code>=</code> 的行会被忽略。</p>
+                    </td>
                 </tr>
             </table>
             <p class="submit"><button type="submit" class="button button-primary button-hero" id="ew-import-btn"><span class="dashicons dashicons-upload"></span> 开始导入</button></p>
@@ -685,7 +860,7 @@ function ew_render_product_import() {
                     html = '<div class="notice ' + (data.dry ? 'notice-info' : 'notice-success') + ' is-dismissible"><p>' + head + '（见下表）。</p></div>';
                 }
                 if (data.results && data.results.length) {
-                    html += '<h2>本次导入结果</h2><table class="widefat striped" style="max-width:960px"><thead><tr><th>型号</th><th>状态</th><th>图片</th><th>链接</th></tr></thead><tbody>';
+                    html += '<h2>本次导入结果</h2><table class="widefat striped" style="max-width:960px"><thead><tr><th>型号</th><th>状态</th><th>分类</th><th>图片</th><th>链接</th></tr></thead><tbody>';
                     data.results.forEach(function (r) {
                         var st = r.skip ? '<span style="color:#2271ae">跳过</span> · ' + esc(r.msg)
                             : r.ok ? '<span style="color:#00a32a">成功</span>'
@@ -694,7 +869,7 @@ function ew_render_product_import() {
                         var link = '';
                         if (r.url) { link += '<a href="' + esc(r.url) + '" target="_blank">查看</a>&nbsp;'; }
                         if (r.edit) { link += '<a href="' + esc(r.edit) + '">编辑</a>'; }
-                        html += '<tr><td>' + esc(r.name) + '</td><td>' + st + '</td><td>' + img + '</td><td>' + link + '</td></tr>';
+                        html += '<tr><td>' + esc(r.name) + '</td><td>' + st + '</td><td>' + (r.cat ? esc(r.cat) : '<span style="color:#d63638">未识别</span>') + '</td><td>' + img + '</td><td>' + link + '</td></tr>';
                     });
                     html += '</tbody></table>';
                 }
@@ -748,7 +923,7 @@ function ew_render_product_import() {
         <?php if ( ! empty( $rows ) ) : ?>
             <h2>本次导入结果</h2>
             <table class="widefat striped" style="max-width:960px">
-                <thead><tr><th>型号</th><th>状态</th><th>图片</th><th>链接</th></tr></thead>
+                <thead><tr><th>型号</th><th>状态</th><th>分类</th><th>图片</th><th>链接</th></tr></thead>
                 <tbody>
                 <?php foreach ( $rows as $r ) : ?>
                     <tr>
@@ -760,6 +935,13 @@ function ew_render_product_import() {
                                 <span style="color:#00a32a">成功</span>
                             <?php else : ?>
                                 <span style="color:#d63638">失败</span> · <?php echo esc_html( $r['msg'] ); ?>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if ( ! empty( $r['cat'] ) ) : ?>
+                                <?php echo esc_html( $r['cat'] ); ?>
+                            <?php else : ?>
+                                <span style="color:#d63638">未识别</span>
                             <?php endif; ?>
                         </td>
                         <td><?php echo ! empty( $r['ok'] ) && empty( $r['skip'] ) ? esc_html( $r['msg'] ) : ''; ?></td>
