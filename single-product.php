@@ -115,6 +115,46 @@ function ew_get_model_detail_images( $model_id ) {
 }
 }
 
+/**
+ * Product Details 的固定三图：白底图 / 商品详细信息图 / 使用场景图。
+ * _model_detail_extras 存 {"white":[id],"scene":[id]}；翻译页回退到 EN 源 post。
+ *
+ * @param int $model_id Variation ID or post ID.
+ * @return array{white:int,scene:int[]}
+ */
+if ( ! function_exists( 'ew_get_model_detail_extras' ) ) {
+function ew_get_model_detail_extras( $model_id ) {
+    $pid = absint( $model_id );
+    if ( ! $pid ) {
+        return array( 'white' => 0, 'scene' => array() );
+    }
+
+    $raw = get_post_meta( $pid, '_model_detail_extras', true );
+    $map = is_string( $raw ) ? json_decode( $raw, true ) : $raw;
+
+    if ( ! is_array( $map ) || empty( $map ) ) {
+        if ( function_exists( 'pll_get_post' ) && function_exists( 'pll_default_language' ) ) {
+            $en = (int) pll_get_post( $pid, pll_default_language() );
+            if ( $en && $en !== $pid ) {
+                $raw = get_post_meta( $en, '_model_detail_extras', true );
+                $map = is_string( $raw ) ? json_decode( $raw, true ) : $raw;
+            }
+        }
+    }
+    if ( ! is_array( $map ) ) {
+        $map = array();
+    }
+
+    $white = isset( $map['white'] ) ? ( is_array( $map['white'] ) ? reset( $map['white'] ) : $map['white'] ) : 0;
+    $scene = isset( $map['scene'] ) ? (array) $map['scene'] : array();
+
+    return array(
+        'white' => absint( $white ),
+        'scene' => array_values( array_filter( array_map( 'absint', $scene ) ) ),
+    );
+}
+}
+
 get_header();
 
 while ( have_posts() ) :
@@ -650,23 +690,61 @@ while ( have_posts() ) :
 
         <?php
         /* --------------------------------------------------------------------
-         * Product Details — 实拍/详情长图(inc. _model_detail_images)。
-         * 中文页取 'cn' 图,其余语言回退 'en';无图不渲染区块。
+         * Product Details 固定三图：白底图 → 商品详细信息图 → 使用场景图。
+         * 白底/场景来自 _model_detail_extras，详情图来自 _model_detail_images。
+         * 老数据没有 extras 时，白底回退主图、场景回退画廊第 2 张。
          * -------------------------------------------------------------------- */
-        $ew_detail_ids = ew_get_model_detail_images( (int) $current_model['id'] );
-        if ( ! empty( $ew_detail_ids ) ) :
+        $ew_detail_ids   = ew_get_model_detail_images( (int) $current_model['id'] );
+        $ew_detail_extra = ew_get_model_detail_extras( (int) $current_model['id'] );
+        $ew_gallery_ids  = ! empty( $current_model['gallery'] ) ? array_values( array_filter( array_map( 'absint', $current_model['gallery'] ) ) ) : array();
+
+        $ew_white_id = (int) $ew_detail_extra['white'];
+        if ( ! $ew_white_id && ! empty( $ew_gallery_ids ) ) {
+            $ew_white_id = (int) $ew_gallery_ids[0];
+        }
+
+        $ew_scene_ids = (array) $ew_detail_extra['scene'];
+        if ( empty( $ew_scene_ids ) && ! empty( $ew_detail_ids ) && count( $ew_gallery_ids ) > 1 ) {
+            $ew_scene_ids = array( (int) $ew_gallery_ids[1] );
+        }
+
+        $ew_detail_blocks = array();
+        if ( $ew_white_id ) { $ew_detail_blocks[] = array( 'id' => $ew_white_id, 'type' => 'white' ); }
+        foreach ( $ew_detail_ids as $ew_did ) { $ew_detail_blocks[] = array( 'id' => (int) $ew_did, 'type' => 'info' ); }
+        foreach ( $ew_scene_ids as $ew_sid ) { $ew_detail_blocks[] = array( 'id' => (int) $ew_sid, 'type' => 'scene' ); }
+
+        // 去重，避免老数据里同一张图重复出现
+        $ew_seen = array();
+        $ew_blocks = array();
+        foreach ( $ew_detail_blocks as $ew_block ) {
+            if ( ! $ew_block['id'] || isset( $ew_seen[ $ew_block['id'] ] ) ) { continue; }
+            $ew_seen[ $ew_block['id'] ] = true;
+            $ew_blocks[] = $ew_block;
+        }
+
+        $ew_show_details = ! empty( $ew_blocks ) && ( ! empty( $ew_detail_ids ) || ! empty( $ew_detail_extra['white'] ) || ! empty( $ew_detail_extra['scene'] ) );
+        if ( $ew_show_details ) :
+            $ew_detail_labels = array(
+                'white' => ew_esc_html__( 'White background' ),
+                'info'  => ew_esc_html__( 'Product details' ),
+                'scene' => ew_esc_html__( 'Application scenario' ),
+            );
             ?>
             <section class="product-details" data-animation-wrap>
                 <h2 class="section-title" data-animation="1"><?php ew_esc_html_e('Product Details'); ?></h2>
                 <div class="product-details__list">
-                    <?php foreach ( $ew_detail_ids as $ew_did ) : ?>
-                        <div class="product-details__item">
+                    <?php foreach ( $ew_blocks as $ew_block ) : ?>
+                        <div class="product-details__item product-details__item--<?php echo esc_attr( $ew_block['type'] ); ?>">
                             <?php
                             echo wp_get_attachment_image(
-                                (int) $ew_did,
+                                (int) $ew_block['id'],
                                 'full',
                                 false,
-                                array( 'loading' => 'lazy', 'decoding' => 'async' )
+                                array(
+                                    'loading'  => 'lazy',
+                                    'decoding' => 'async',
+                                    'alt'      => $current_model['label'] . ' - ' . $ew_detail_labels[ $ew_block['type'] ],
+                                )
                             );
                             ?>
                         </div>

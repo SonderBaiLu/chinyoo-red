@@ -2608,7 +2608,8 @@ section {
 }
 
 /* ============================================================
-   Product Details 实拍/详情长图(single-product.php, _model_detail_images)
+   Product Details 三图：白底图 / 详细信息图 / 使用场景图
+   (single-product.php, _model_detail_extras + _model_detail_images)
    ============================================================ */
 .product-details {
     margin-top: 4rem
@@ -2636,9 +2637,18 @@ section {
     box-shadow: 0 2px 12px rgba(0, 0, 0, .06)
 }
 
+/* 白底图单独限宽，避免方图在桌面端铺满整屏 */
+.product-details__item--white img {
+    max-width: 760px
+}
+
 @media (max-width: 992px) {
     .product-details__item {
         padding: .75rem
+    }
+
+    .product-details__item--white img {
+        max-width: 100%
     }
 }
 
