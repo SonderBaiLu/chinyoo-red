@@ -249,6 +249,25 @@ function ew_import_category_label( $slug ) {
     return ( $term && ! is_wp_error( $term ) ) ? $term->name : $slug;
 }
 
+/* 当前语言已发布商品总数（分类侧栏 All Products 计数，不受分类限制） */
+function ew_total_product_count() {
+    static $count = null;
+    if ( null !== $count ) { return $count; }
+    $args = array(
+        'post_type'      => 'product',
+        'post_status'    => 'publish',
+        'posts_per_page' => 1,
+        'fields'         => 'ids',
+        'no_found_rows'  => false,
+    );
+    if ( function_exists( 'pll_current_language' ) && pll_current_language() ) {
+        $args['lang'] = pll_current_language();
+    }
+    $query = new WP_Query( $args );
+    $count = (int) $query->found_posts;
+    return $count;
+}
+
 /* ---------- 多语言：把默认语言商品同步到其它 Polylang 语言 ---------- */
 function ew_product_translation_meta_keys() {
     return array(
@@ -1075,6 +1094,16 @@ function ew_render_product_import() {
             if ( $pll_lang->slug !== $pll_default ) { $sync_lang_names[] = $pll_lang->name; }
         }
     }
+
+    // 兜底分类默认 Other Instruments：识别不出的型号也不会从分类页消失
+    $default_cat_id = 0;
+    foreach ( $cats as $c ) {
+        if ( 'others' === $c->slug ) { $default_cat_id = (int) $c->term_id; break; }
+    }
+    if ( ! $default_cat_id ) {
+        $others_term = get_term_by( 'slug', 'others', 'product_cat' );
+        if ( $others_term && ! is_wp_error( $others_term ) ) { $default_cat_id = (int) $others_term->term_id; }
+    }
     $notice  = '';
     $rows    = array();
     $expired = false;
@@ -1085,10 +1114,10 @@ function ew_render_product_import() {
             $error = isset( $decoded['error'] ) ? $decoded['error'] : '';
             $rows  = isset( $decoded['results'] ) ? $decoded['results'] : array();
             $dry   = ! empty( $decoded['dry'] );
-            $ok = $skip = $fail = 0;
+            $ok = $skip = $fail = $uncat = 0;
             foreach ( $rows as $r ) {
                 if ( ! empty( $r['skip'] ) ) { $skip++; }
-                elseif ( ! empty( $r['ok'] ) ) { $ok++; }
+                elseif ( ! empty( $r['ok'] ) ) { $ok++; if ( empty( $r['cat'] ) ) { $uncat++; } }
                 else { $fail++; }
             }
             if ( $error ) {
@@ -1100,6 +1129,9 @@ function ew_render_product_import() {
                 if ( $fail ) { $extra .= '，失败 <strong style="color:#d63638">' . esc_html( (string) $fail ) . '</strong> 个'; }
                 $notice = '<div class="notice ' . ( $dry ? 'notice-info' : 'notice-success' ) . ' is-dismissible"><p>' . esc_html( $label )
                     . ' <strong>' . esc_html( (string) $ok ) . '</strong> 个' . $extra . '（见下表）。</p></div>';
+                if ( $uncat ) {
+                    $notice .= '<div class="notice notice-warning is-dismissible"><p>有 <strong>' . esc_html( (string) $uncat ) . '</strong> 个商品未识别分类，不会出现在分类页；请在「分类对照表」补型号，或把「兜底分类」设为 Other Instruments。</p></div>';
+                }
             }
         } else {
             $expired = true;
@@ -1149,12 +1181,12 @@ function ew_render_product_import() {
                     <th scope="row">兜底分类</th>
                     <td>
                         <select name="ew_cat_id">
-                            <option value="0">不分类</option>
+                            <option value="0" <?php selected( $default_cat_id, 0 ); ?>>不分类</option>
                             <?php foreach ( $cats as $c ) : ?>
-                                <option value="<?php echo (int) $c->term_id; ?>"><?php echo esc_html( $c->name ); ?></option>
+                                <option value="<?php echo (int) $c->term_id; ?>" <?php selected( $default_cat_id, (int) $c->term_id ); ?>><?php echo esc_html( $c->name ); ?></option>
                             <?php endforeach; ?>
                         </select>
-                        <p class="description">自动识别不出来的型号，统一挂到这里；关掉「自动分类」时所有型号都用这个分类。</p>
+                        <p class="description">自动识别不出来的型号，统一挂到这里（默认 Other Instruments）；关掉「自动分类」时所有型号都用这个分类。</p>
                     </td>
                 </tr>
                 <tr>
@@ -1261,6 +1293,8 @@ function ew_render_product_import() {
                         var head = '<p><strong>' + label + c.ok + ' 个';
                         if (c.skip) { head += '，跳过 ' + c.skip + ' 个（重复/标注）'; }
                         if (c.fail) { head += '，失败 ' + c.fail + ' 个'; }
+                        var uncat = allResults.filter(function (r) { return r.ok && !r.skip && !r.cat; }).length;
+                        if (uncat) { head += '；其中 ' + uncat + ' 个未识别分类（不会出现在分类页，可补分类对照表或设兜底分类）'; }
                         head += '（见下表）。</p>';
                         html = '<div class="notice ' + (dry ? 'notice-info' : (c.fail ? 'notice-warning' : 'notice-success')) + ' is-dismissible">' + head + '</div>';
                     }

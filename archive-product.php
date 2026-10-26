@@ -54,7 +54,7 @@ if ( $current_cat_id ) {
             <?php endif; ?>
             <div class="catalog-toolbar">
                 <p><strong><?php echo number_format_i18n( (int) $wp_query->found_posts ); ?></strong> <?php ew_esc_html_e( 'Products found' ); ?></p>
-                <a href="<?php echo esc_url( ew_page_url( 'product-categories' ) ); ?>"><?php ew_esc_html_e( 'All Products' ); ?> <span aria-hidden="true">↗</span></a>
+                <a href="<?php echo esc_url( function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'shop' ) : get_post_type_archive_link( 'product' ) ); ?>"><?php ew_esc_html_e( 'All Products' ); ?> <span aria-hidden="true">↗</span></a>
             </div>
             <?php if ( class_exists( 'Chinyoo_Product_Filter' ) ) { Chinyoo_Product_Filter::render_active_chips(); } ?>
             <?php if ( have_posts() ) : ?>

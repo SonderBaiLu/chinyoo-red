@@ -27,7 +27,11 @@ $render_children = function ( $parent ) use ( &$render_children, $current ) {
 <details class="catalog-navigation" open>
     <summary><?php ew_esc_html_e( 'Categories' ); ?> <span aria-hidden="true">⌄</span></summary>
     <nav class="catalog-nav" aria-label="<?php ew_esc_attr_e( 'Product Categories' ); ?>">
-        <a class="catalog-nav__all" href="<?php echo esc_url( ew_page_url( 'product-categories' ) ); ?>"<?php echo $overview ? ' aria-current="page"' : ''; ?>><?php ew_esc_html_e( 'All Products' ); ?> <span aria-hidden="true">↗</span></a>
+        <?php
+        $shop_url = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'shop' ) : get_post_type_archive_link( 'product' );
+        $is_shop  = ( function_exists( 'is_shop' ) && is_shop() ) || is_post_type_archive( 'product' );
+        ?>
+        <a class="catalog-nav__all" href="<?php echo esc_url( $shop_url ); ?>"<?php echo $is_shop ? ' aria-current="page"' : ''; ?>><?php ew_esc_html_e( 'All Products' ); ?> <span class="catalog-nav__count"><?php echo (int) ew_total_product_count(); ?></span></a>
         <?php foreach ( $ordered as $category ) :
             $id = (int) $category->term_id;
             $url = get_term_link( $category );
