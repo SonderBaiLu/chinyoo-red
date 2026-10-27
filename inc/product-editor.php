@@ -53,6 +53,167 @@ function ew_editor_image_section( $id, $key, $title, $images, $description = '',
     <?php
 }
 
+/* ---------- 下载商品原图：收集图片附件 → 打包 ZIP ---------- */
+function ew_product_original_source_id( $product_id ) {
+    $id = absint( $product_id );
+    if ( ! $id ) { return 0; }
+    if ( function_exists( 'pll_get_post_language' ) && function_exists( 'pll_default_language' ) ) {
+        $lang = pll_get_post_language( $id );
+        if ( $lang && $lang !== pll_default_language() ) {
+            $original = (int) pll_get_post( $id, pll_default_language() );
+            if ( $original && 'product' === get_post_type( $original ) ) { return $original; }
+        }
+    }
+    return $id;
+}
+
+function ew_product_collect_original_image_ids( $product_id ) {
+    $id = ew_product_original_source_id( $product_id );
+    if ( ! $id ) { return array(); }
+
+    $ids = array();
+    $thumb = (int) get_post_thumbnail_id( $id );
+    if ( $thumb ) { $ids[] = $thumb; }
+
+    $ids = array_merge( $ids, ew_editor_images( get_post_meta( $id, '_model_gallery', true ) ) );
+
+    $details = ew_editor_array( get_post_meta( $id, '_model_detail_images', true ) );
+    foreach ( $details as $list ) {
+        if ( is_array( $list ) ) { $ids = array_merge( $ids, array_map( 'absint', $list ) ); }
+    }
+
+    $extras = ew_editor_array( get_post_meta( $id, '_model_detail_extras', true ) );
+    foreach ( array( 'white', 'scene' ) as $key ) {
+        if ( isset( $extras[ $key ] ) ) { $ids = array_merge( $ids, array_map( 'absint', (array) $extras[ $key ] ) ); }
+    }
+
+    $children = get_children( array(
+        'post_parent'    => $id,
+        'post_type'      => 'attachment',
+        'post_mime_type' => 'image',
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+        'post_status'    => 'any',
+    ) );
+    if ( is_array( $children ) ) { $ids = array_merge( $ids, array_map( 'absint', $children ) ); }
+
+    $ids = array_values( array_unique( array_filter( $ids ) ) );
+    return array_values( array_filter( $ids, function ( $aid ) { return wp_attachment_is_image( $aid ); } ) );
+}
+
+function ew_product_build_originals_zip( $product_id ) {
+    $ids = ew_product_collect_original_image_ids( $product_id );
+    if ( empty( $ids ) ) {
+        return new WP_Error( 'ew_no_images', '这个商品没有可下载的图片。' );
+    }
+    if ( ! class_exists( 'ZipArchive' ) ) {
+        return new WP_Error( 'ew_no_zip', '服务器缺少 ZipArchive 扩展。' );
+    }
+
+    $base = function_exists( 'ew_import_temp_base' ) ? ew_import_temp_base() : get_temp_dir();
+    if ( '' === $base || ! is_dir( $base ) || ! is_writable( $base ) ) {
+        return new WP_Error( 'ew_no_temp', '无法创建临时目录。' );
+    }
+    // 清理上次中断下载留下的临时 ZIP
+    foreach ( (array) glob( trailingslashit( $base ) . 'originals-*.zip' ) as $stale ) {
+        if ( is_file( $stale ) && (int) @filemtime( $stale ) < time() - HOUR_IN_SECONDS ) { @unlink( $stale ); }
+    }
+    $zip_path = trailingslashit( $base ) . 'originals-' . strtolower( wp_generate_password( 16, false, false ) ) . '.zip';
+    $zip      = new ZipArchive();
+    if ( true !== $zip->open( $zip_path, ZipArchive::CREATE | ZipArchive::OVERWRITE ) ) {
+        return new WP_Error( 'ew_zip_open', '无法创建 ZIP 文件。' );
+    }
+
+    $source_id = ew_product_original_source_id( $product_id );
+    $model     = (string) get_post_meta( $source_id, 'product_model', true );
+    if ( '' === $model ) { $model = (string) get_the_title( $source_id ); }
+
+    $used    = array();
+    $added   = 0;
+    $manifest = array(
+        '商品：' . get_the_title( $source_id ),
+        '型号：' . $model,
+        '原图数量：' . count( $ids ),
+        '',
+    );
+
+    foreach ( $ids as $aid ) {
+        // 优先取 WordPress 的 original_image（大图被 -scaled 缩放前的原文件）
+        $file = function_exists( 'wp_get_original_image_path' ) ? wp_get_original_image_path( $aid ) : '';
+        if ( ! $file || ! is_file( $file ) || ! is_readable( $file ) ) {
+            $file = get_attached_file( $aid );
+        }
+        if ( ! $file || ! is_file( $file ) || ! is_readable( $file ) ) { continue; }
+
+        $name = wp_basename( $file );
+        if ( '' === $name ) { $name = 'image-' . (int) $aid . '.jpg'; }
+        $candidate = $name;
+        $i = 2;
+        while ( isset( $used[ strtolower( $candidate ) ] ) ) {
+            $info      = pathinfo( $name );
+            $candidate = $info['filename'] . '-' . $i . ( isset( $info['extension'] ) ? '.' . $info['extension'] : '' );
+            $i++;
+        }
+        $used[ strtolower( $candidate ) ] = true;
+
+        if ( $zip->addFile( $file, $candidate ) ) {
+            $added++;
+            $manifest[] = $candidate;
+        }
+    }
+
+    if ( 0 === $added ) {
+        $zip->close();
+        @unlink( $zip_path );
+        return new WP_Error( 'ew_zip_empty', '没有找到可读取的原图文件。' );
+    }
+
+    $zip->addFromString( '图片清单.txt', implode( "\n", $manifest ) . "\n" );
+    $zip->close();
+
+    if ( ! is_file( $zip_path ) || filesize( $zip_path ) <= 0 ) {
+        @unlink( $zip_path );
+        return new WP_Error( 'ew_zip_failed', '图片打包失败。' );
+    }
+
+    $display = trim( preg_replace( '/[\\\\\\/:"*?<>|]+/u', '-', $model ) );
+    if ( '' === $display ) { $display = 'product-' . (int) $source_id; }
+
+    return array( 'path' => $zip_path, 'name' => $display . '-原图.zip', 'count' => $added );
+}
+
+add_action( 'admin_post_ew_product_download_originals', function () {
+    $id = isset( $_GET['product_id'] ) ? absint( $_GET['product_id'] ) : 0;
+    if ( ! $id || 'product' !== get_post_type( $id ) || ! current_user_can( 'edit_post', $id ) ) {
+        wp_die( '您没有权限下载这个商品的图片。' );
+    }
+    check_admin_referer( 'ew_product_download_originals_' . $id );
+
+    @set_time_limit( 0 );
+    $zip = ew_product_build_originals_zip( $id );
+    if ( is_wp_error( $zip ) ) {
+        wp_die( esc_html( $zip->get_error_message() ) );
+    }
+
+    if ( function_exists( 'session_write_close' ) && function_exists( 'session_status' ) && PHP_SESSION_ACTIVE === session_status() ) {
+        session_write_close();
+    }
+    while ( ob_get_level() ) { ob_end_clean(); }
+
+    $zip_path = $zip['path'];
+    register_shutdown_function( function () use ( $zip_path ) {
+        if ( is_file( $zip_path ) ) { @unlink( $zip_path ); }
+    } );
+
+    nocache_headers();
+    header( 'Content-Type: application/zip' );
+    header( 'Content-Disposition: attachment; filename="product-' . (int) $id . '-originals.zip"; filename*=UTF-8\'\'' . rawurlencode( $zip['name'] ) );
+    header( 'Content-Length: ' . filesize( $zip_path ) );
+    header( 'X-Content-Type-Options: nosniff' );
+    readfile( $zip_path );
+    exit;
+} );
+
 /* 编辑器：主图画廊 + 技术参数 + Product Details 三图（白底/详情/场景）。studio 页与 Woo 变体共用 */
 function ew_model_editor( $id, $context = 'metabox' ) {
     $details = ew_editor_array( get_post_meta( $id, '_model_detail_images', true ) );
@@ -234,7 +395,7 @@ function ew_studio_form( $product_id, $values, $is_new = false ) {
     ?>
     <form class="ew-studio-form" method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
         <input type="hidden" name="action" value="ew_product_studio_save"><input type="hidden" name="product_id" value="<?php echo (int) $product_id; ?>"><?php wp_nonce_field( 'ew_product_studio_save_' . (int) $product_id, 'ew_studio_nonce' ); ?>
-        <div class="ew-studio-toolbar"><div><a href="<?php echo esc_url( ew_product_studio_url() ); ?>">← 返回商品列表</a><strong><?php echo esc_html( $values['title'] ?: ( $is_new ? '新建商品' : '(未命名)' ) ); ?></strong><span class="ew-status-badge<?php echo ( $is_new || 'publish' === $status ) ? ' is-publish' : ''; ?>"><?php echo $is_new ? '新商品' : ( 'publish' === $status ? '已发布' : esc_html( get_post_status_object( $status )->label ) ); ?></span></div><div><?php if ( $product_id ) : ?><a class="button" href="<?php echo esc_url( get_permalink( $product_id ) ); ?>" target="_blank">查看前台</a><button type="submit" form="ew-delete-form" class="button ew-delete-button"><span class="dashicons dashicons-trash"></span>删除</button><?php endif; ?><button class="button button-primary ew-save-button"><span class="dashicons dashicons-saved"></span>保存</button></div></div>
+        <div class="ew-studio-toolbar"><div><a href="<?php echo esc_url( ew_product_studio_url() ); ?>">← 返回商品列表</a><strong><?php echo esc_html( $values['title'] ?: ( $is_new ? '新建商品' : '(未命名)' ) ); ?></strong><span class="ew-status-badge<?php echo ( $is_new || 'publish' === $status ) ? ' is-publish' : ''; ?>"><?php echo $is_new ? '新商品' : ( 'publish' === $status ? '已发布' : esc_html( get_post_status_object( $status )->label ) ); ?></span></div><div><?php if ( $product_id ) : ?><a class="button" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=ew_product_download_originals&product_id=' . (int) $product_id ), 'ew_product_download_originals_' . (int) $product_id ) ); ?>" title="打包下载该商品所有原图（ZIP）"><span class="dashicons dashicons-download"></span>下载原图</a><a class="button" href="<?php echo esc_url( get_permalink( $product_id ) ); ?>" target="_blank">查看前台</a><button type="submit" form="ew-delete-form" class="button ew-delete-button"><span class="dashicons dashicons-trash"></span>删除</button><?php endif; ?><button class="button button-primary ew-save-button"><span class="dashicons dashicons-saved"></span>保存</button></div></div>
         <section id="ew-studio-basic" class="ew-editor-panel ew-basic-panel">
             <div class="ew-panel-heading"><div><h3>基本资料</h3><p>保存后立即同步到前台。</p></div></div>
             <div class="ew-basic-grid">
