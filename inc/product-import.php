@@ -95,7 +95,13 @@ function ew_import_classify( $file_name ) {
     return null; // 未识别 → 画廊兜底
 }
 
+/* 参考图（如「详细信息参考图.png」）只是设计样稿，不进商品库 */
+function ew_import_is_reference_image( $file ) {
+    return false !== mb_strpos( (string) pathinfo( $file, PATHINFO_FILENAME ), '参考图' );
+}
+
 function ew_import_is_image( $file ) {
+    if ( ew_import_is_reference_image( $file ) ) { return false; }
     $ext = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
     return in_array( $ext, array( 'jpg', 'jpeg', 'png', 'webp', 'gif' ), true );
 }
@@ -153,6 +159,147 @@ function ew_import_read_meta_text( $dir ) {
         if ( false !== $raw ) { $chunks[] = mb_substr( $raw, 0, 600 ); }
     }
     return implode( ' ', $chunks );
+}
+
+/* ---------- 解析 info.json / 参数c.json，产出五个选项卡的文本 ---------- */
+
+/* 把一行「字段名 : 值」拆成 name/value；字段名不含冒号则当纯文本特性返回 */
+function ew_import_split_kv( $line ) {
+    $line = trim( (string) $line );
+    $line = str_replace( array( '：', '﹕', '∶' ), ':', $line ); // 全角冒号归一
+    if ( '' === $line ) { return array( '', '', false ); }
+    // 特性行（Key Features）常见写法：以 Yes/No 结尾，如 "Low battery indication: yes"
+    $is_bool = (bool) preg_match( '/:\s*(yes|no|true|false|with|without)\s*$/i', $line );
+    $pos = mb_strpos( $line, ':' );
+    if ( false === $pos ) { return array( $line, '', $is_bool ); }
+    $name  = trim( mb_substr( $line, 0, $pos ) );
+    $value = trim( mb_substr( $line, $pos + 1 ) );
+    if ( '' === $name ) { return array( $line, '', $is_bool ); }
+    return array( $name, $value, $is_bool );
+}
+
+/*
+ * 把 info.json 的内容拆成：
+ *   specs   → _model_specs         (DCV/ACV/Resistance/Range… 带数值)
+ *   features→ _model_features      (Description 之后的纯特性/Yes-No 行)
+ *   packaging→ _packaging           (packaging 字段原文)
+ * 通用约定：Description 之前的「字段: 数值」是规格，之后是特性说明。
+ */
+function ew_import_parse_details( $details ) {
+    $result = array( 'specs' => array(), 'features' => array() );
+    if ( ! is_string( $details ) || '' === trim( $details ) ) { return $result; }
+
+    $lines = array_values( array_filter( array_map( 'trim', preg_split( '/\r\n|\r|\n/', $details ) ) ) );
+    $in_desc = false;
+    foreach ( $lines as $line ) {
+        if ( '' === $line ) { continue; }
+        // "Description" 单独一行 = 分界：之前是规格，之后是特性
+        if ( preg_match( '/^description\s*$/iu', $line ) ) { $in_desc = true; continue; }
+
+        list( $name, $value, $is_bool ) = ew_import_split_kv( $line );
+        if ( '' === $value && ! $is_bool ) { $value = $name; }
+
+        if ( $in_desc || $is_bool ) {
+            $result['features'][] = array( 'name' => $name, 'value' => $value );
+        } else {
+            $result['specs'][] = array( 'name' => $name, 'value' => $value );
+        }
+    }
+    return $result;
+}
+
+/* 读取并解析文件夹里所有 JSON 的文本字段，返回五个选项卡要写入的 meta */
+function ew_import_read_product_text( $dir ) {
+    $specs     = array();
+    $features  = array();
+    $packaging = '';
+
+    foreach ( (array) glob( $dir . '/*.json' ) as $file ) {
+        $raw = @file_get_contents( $file );
+        if ( false === $raw ) { continue; }
+        $raw  = preg_replace( '/^\xEF\xBB\xBF/', '', $raw );
+        $data = json_decode( $raw, true );
+        if ( ! is_array( $data ) ) { continue; }
+
+        // details：规格 + 特性
+        if ( isset( $data['details'] ) && is_string( $data['details'] ) ) {
+            $parsed = ew_import_parse_details( $data['details'] );
+            foreach ( $parsed['specs'] as $s ) { $specs[] = $s; }
+            foreach ( $parsed['features'] as $f ) { $features[] = $f; }
+        }
+
+        // product_information：电压测试笔等只有纯描述 → 全部当特性
+        if ( isset( $data['product_information'] ) && is_string( $data['product_information'] ) ) {
+            foreach ( preg_split( '/\r\n|\r|\n/', $data['product_information'] ) as $line ) {
+                $line = trim( $line );
+                if ( '' === $line ) { continue; }
+                $line = preg_replace( '/^\s*\d+[\.\)、]\s*/u', '', $line ); // 去掉 1. 2. 序号
+                if ( '' !== trim( $line ) ) { $features[] = array( 'name' => $line, 'value' => $line ); }
+            }
+        }
+
+        // packaging：原文写入 General 选项卡
+        if ( isset( $data['packaging'] ) && is_string( $data['packaging'] ) && '' !== trim( $data['packaging'] ) ) {
+            $packaging = trim( $data['packaging'] );
+        }
+    }
+
+    // 生成记录.txt：图片生成工具会把参数写在「详细参数：」后面的 - 列表里，一并解析
+    foreach ( (array) glob( $dir . '/生成记录.txt' ) as $file ) {
+        $raw = @file_get_contents( $file );
+        if ( false === $raw ) { continue; }
+        $raw = preg_replace( '/^\xEF\xBB\xBF/', '', $raw );
+
+        $section = $raw;
+        if ( preg_match( '/详细参数\s*[:：]\s*(.*)$/us', $raw, $m ) ) {
+            $section = $m[1];
+        }
+        $pack_lines = array();
+        foreach ( preg_split( '/\r\n|\r|\n/', $section ) as $line ) {
+            $line = trim( $line );
+            // 只取 bullet 行（- / • / · 开头），其它描述行跳过
+            if ( ! preg_match( '/^[-•·*]\s*/u', $line ) ) { continue; }
+            $line = preg_replace( '/^[-•·*]\s*/u', '', $line );
+            if ( '' === $line ) { continue; }
+
+            list( $name, $value, $is_bool ) = ew_import_split_kv( $line );
+            if ( '' === $name ) { continue; }
+            // 包装类行 → 拼进 packaging；其余 → 特性
+            if ( preg_match( '/^(packing|packing quantity|carton size|g\.w\.?|n\.w\.?|gross|net|weight|volume)/iu', $name ) ) {
+                if ( '' !== $value ) { $pack_lines[] = $name . ': ' . $value; }
+            } elseif ( '' !== $value && $value !== $name ) {
+                $features[] = array( 'name' => $name, 'value' => $value );
+            } else {
+                $features[] = array( 'name' => $name, 'value' => $name );
+            }
+        }
+        if ( ! empty( $pack_lines ) && '' === $packaging ) {
+            $packaging = implode( "\n", $pack_lines );
+        }
+    }
+
+    // 规格去重（同名保留首个）；特性去重（整行去重）
+    $spec_seen = array();
+    $specs     = array_values( array_filter( $specs, function ( $s ) use ( &$spec_seen ) {
+        $key = mb_strtolower( trim( (string) $s['name'] ) );
+        if ( '' === $key || isset( $spec_seen[ $key ] ) ) { return false; }
+        $spec_seen[ $key ] = true;
+        return true;
+    } ) );
+    $feat_seen = array();
+    $features  = array_values( array_filter( $features, function ( $f ) use ( &$feat_seen ) {
+        $key = mb_strtolower( trim( (string) $f['value'] ) );
+        if ( '' === $key || isset( $feat_seen[ $key ] ) ) { return false; }
+        $feat_seen[ $key ] = true;
+        return true;
+    } ) );
+
+    // Application：素材里没有专门字段 → 留空，前台渲染通用兜底文案
+    return array(
+        'specs'     => $specs,
+        'features'  => $features,
+        'packaging' => $packaging,
+    );
 }
 
 /* 强制指定：文件夹里放 分类.txt（一行分类名 / 中文名 / slug）时优先采用 */
@@ -549,10 +696,14 @@ function ew_import_one_folder( $dir, $folder_name, $options ) {
 
     // 试运行：只统计不落库
     if ( ! empty( $options['dry'] ) ) {
-        return array( 'name' => $folder_name, 'ok' => true, 'msg' => $summary, 'cat' => $cat_label, 'url' => '' );
+        $dry_text = ew_import_read_product_text( $dir );
+        $dry_extra = ( ! empty( $dry_text['specs'] ) || ! empty( $dry_text['features'] ) || '' !== $dry_text['packaging'] )
+            ? sprintf( ' · 参数 %d 条 / 特性 %d 条 / 包装%s', count( $dry_text['specs'] ), count( $dry_text['features'] ), '' !== $dry_text['packaging'] ? ' 有' : ' 无' )
+            : '';
+        return array( 'name' => $folder_name, 'ok' => true, 'msg' => $summary . $dry_extra, 'cat' => $cat_label, 'url' => '' );
     }
 
-    // 重复检查：同 SKU 已存在则跳过，不重复创建
+    // 重复检查：同 SKU 已存在
     // cache_results=false：导入同批次重复型号时，避免复用本请求早先的空查询缓存
     $found = get_posts( array(
         'post_type'        => 'product',
@@ -564,27 +715,58 @@ function ew_import_one_folder( $dir, $folder_name, $options ) {
         'suppress_filters' => true,
         'cache_results'    => false,
     ) );
-    if ( ! empty( $found ) ) {
-        $ex = (int) $found[0];
-        return array( 'name' => $folder_name, 'ok' => false, 'skip' => true, 'msg' => '已存在（同 SKU），已跳过', 'url' => get_permalink( $ex ), 'edit' => get_edit_post_link( $ex ) );
+    $existing_id = ! empty( $found ) ? (int) $found[0] : 0;
+    $replacing   = false;
+
+    if ( $existing_id && empty( $options['replace'] ) ) {
+        return array( 'name' => $folder_name, 'ok' => false, 'skip' => true, 'msg' => '已存在（同 SKU），已跳过', 'url' => get_permalink( $existing_id ), 'edit' => get_edit_post_link( $existing_id ) );
     }
 
-    // 建商品
-    $prod_id = wp_insert_post( array(
-        'post_type'    => 'product',
-        'post_title'   => $folder_name,
-        'post_excerpt' => '',
-        'post_content' => '',
-        'post_status'  => $options['status'],
-    ) );
-    if ( ! $prod_id ) {
-        return array( 'name' => $folder_name, 'ok' => false, 'msg' => '创建商品失败', 'url' => '' );
+    if ( $existing_id ) {
+        // 替换：复用原商品 ID，不改 slug → 前台链接不变；只刷新标题/状态、图片与内容
+        $replacing = true;
+        $prod_id   = $existing_id;
+        wp_update_post( array(
+            'ID'          => $prod_id,
+            'post_title'  => $folder_name,
+            'post_status' => $options['status'],
+        ) );
+    } else {
+        // 建商品
+        $prod_id = wp_insert_post( array(
+            'post_type'    => 'product',
+            'post_title'   => $folder_name,
+            'post_excerpt' => '',
+            'post_content' => '',
+            'post_status'  => $options['status'],
+        ) );
+        if ( ! $prod_id ) {
+            return array( 'name' => $folder_name, 'ok' => false, 'msg' => '创建商品失败', 'url' => '' );
+        }
     }
     update_post_meta( $prod_id, '_product_type', 'simple' );
     update_post_meta( $prod_id, '_stock_status', 'instock' );
     update_post_meta( $prod_id, '_sku', $folder_name );
     update_post_meta( $prod_id, 'product_model', $folder_name );
-    update_post_meta( $prod_id, '_model_specs', wp_json_encode( array() ) );
+
+    // 五个选项卡的文本：从 info.json / 参数c.json 解析
+    $text_data = ew_import_read_product_text( $dir );
+    // 替换时若新素材没带文字，保留原文字，避免误清空；带了的字段则覆盖刷新
+    if ( ! $replacing || ! empty( $text_data['specs'] ) ) {
+        update_post_meta( $prod_id, '_model_specs', wp_json_encode( $text_data['specs'], JSON_UNESCAPED_UNICODE ) );
+    }
+    if ( ! empty( $text_data['features'] ) ) {
+        $feat_lines = array();
+        foreach ( $text_data['features'] as $f ) {
+            $feat_lines[] = isset( $f['value'] ) && '' !== $f['value'] && $f['value'] !== $f['name']
+                ? $f['name'] . ': ' . $f['value']
+                : $f['name'];
+        }
+        update_post_meta( $prod_id, '_model_features', wp_json_encode( array_values( $feat_lines ), JSON_UNESCAPED_UNICODE ) );
+    }
+    if ( '' !== $text_data['packaging'] ) {
+        update_post_meta( $prod_id, '_packaging', $text_data['packaging'] );
+    }
 
     // 多语言：wp_insert_post 不会挂 Polylang 语言，前台按语言过滤会看不到，须手动挂默认语言
     if ( function_exists( 'pll_set_post_language' ) && function_exists( 'pll_default_language' ) ) {
@@ -656,12 +838,13 @@ function ew_import_one_folder( $dir, $folder_name, $options ) {
     }
 
     return array(
-        'name' => $folder_name,
-        'ok'   => true,
-        'msg'  => $summary,
-        'cat'  => $cat_label,
-        'url'  => get_permalink( $prod_id ),
-        'edit' => get_edit_post_link( $prod_id ),
+        'name'     => $folder_name,
+        'ok'       => true,
+        'replaced' => $replacing,
+        'msg'      => $replacing ? ( $summary . '（替换原商品，链接不变）' ) : $summary,
+        'cat'      => $cat_label,
+        'url'      => get_permalink( $prod_id ),
+        'edit'     => get_edit_post_link( $prod_id ),
     );
 }
 
@@ -927,7 +1110,7 @@ function ew_import_run_job_batch( $job, $max_seconds = 35 ) {
 
 function ew_import_job_finish( $job ) {
     if ( ! empty( $job['dir'] ) ) { ew_import_rmdir( $job['dir'] ); }
-    if ( ! empty( $job['id'] ) ) { delete_transient( 'ew_import_job_' . $job['id'] ); }
+    if ( ! empty( $job['id'] ) ) { set_transient( 'ew_import_job_' . $job['id'], $job, 12 * HOUR_IN_SECONDS ); }
 }
 
 /* AJAX 分批处理入口：每次只跑一小批，前端轮询进度 */
@@ -946,6 +1129,21 @@ function ew_handle_product_import_process() {
         ew_import_json_exit( array( 'ok' => false, 'expired' => true, 'error' => '导入任务已过期，请重新上传 ZIP。' ) );
     }
 
+    if ( ! empty( $job['done'] ) ) {
+        ew_import_json_exit( array( 'ok' => true, 'done' => true, 'done_models' => (int) $job['done_models'], 'total_models' => (int) $job['total_models'], 'results' => array_values( $job['results'] ), 'dry' => ! empty( $job['options']['dry'] ) ) );
+    }
+    $lock_path = trailingslashit( $job['dir'] ) . 'process.lock';
+    $lock = @fopen( $lock_path, 'c' );
+    if ( ! $lock || ! flock( $lock, LOCK_EX | LOCK_NB ) ) {
+        if ( $lock ) { fclose( $lock ); }
+        ew_import_json_exit( array( 'ok' => true, 'busy' => true ) );
+    }
+    // The other request may have finished while this one waited for the lock.
+    $job = get_transient( 'ew_import_job_' . $job_id );
+    if ( ! is_array( $job ) ) { ew_import_json_exit( array( 'ok' => false, 'error' => '导入任务已过期。' ) ); }
+    if ( ! empty( $job['done'] ) ) {
+        ew_import_json_exit( array( 'ok' => true, 'done' => true, 'done_models' => (int) $job['done_models'], 'total_models' => (int) $job['total_models'], 'results' => array_values( $job['results'] ), 'dry' => ! empty( $job['options']['dry'] ) ) );
+    }
     @set_time_limit( 0 );
     @ini_set( 'memory_limit', '512M' );
     require_once ABSPATH . 'wp-admin/includes/file.php';
@@ -973,6 +1171,8 @@ function ew_handle_product_import_process() {
     ew_import_json_exit( $payload );
 }
 add_action( 'admin_post_ew_product_import_process', 'ew_handle_product_import_process' );
+
+require_once __DIR__ . '/product-import-upload.php';
 
 /* ---------- 主处理：解压 ZIP 并逐文件夹导入 ---------- */
 function ew_handle_product_import() {
@@ -1018,6 +1218,7 @@ function ew_handle_product_import() {
             'status'     => ( isset( $_POST['ew_status'] ) && 'draft' === $_POST['ew_status'] ) ? 'draft' : 'publish',
             'hot'        => ! empty( $_POST['ew_hot'] ),
             'dry'        => ! empty( $_POST['ew_dry'] ),
+            'replace'    => ! empty( $_POST['ew_duplicate'] ) && 'replace' === $_POST['ew_duplicate'],
         );
 
         // 分类对照表：表单提交后保存，后续导入自动沿用
@@ -1168,6 +1369,7 @@ function ew_render_product_import() {
                 <tr><td><code>详细参数图</code> / <code>详细信息图</code> / <code>详情图</code> …（如 <code>详细参数图 - 英文版.png</code>）</td><td>Product Details 第 2 张（详情长图）</td></tr>
                 <tr><td><code>使用场景图</code> / <code>场景图N</code>（如 <code>使用场景图.jpg</code>）</td><td>Product Details 第 3 张（同时进画廊）</td></tr>
                 <tr><td><code>展示图N</code> / <code>轮播图N</code>（如 <code>展示图1.jpg</code>）</td><td>画廊图（按编号排序）</td></tr>
+                <tr><td>文件夹内的 <code>info.json</code>（或 <code>参数c.json</code>）</td><td>Overview / Information / Specification / General 选项卡的文本</td></tr>
             </tbody>
         </table>
         <p class="description" style="max-width:960px;margin-top:-12px">
@@ -1176,6 +1378,13 @@ function ew_render_product_import() {
             含「<code>英文 / English / _en</code>」的进 <strong>英文页</strong>，含「<code>中文 / _cn</code>」的进 <strong>中文页</strong>；
             没有语言字样的详情图会同时给英文和中文页。其它语言（es/ru/ar）前台自动回退英文详情。
         </p>
+        <p class="description" style="max-width:960px;margin-top:-12px">
+            <strong>五个选项卡怎么填：</strong>在型号文件夹里放 <code>info.json</code>，里面写两个字段即可——<code>details</code>（规格 + 特性）和 <code>packaging</code>（包装）。导入时会自动解析成：
+            <code>details</code> 里 <code>Description</code> 之前的「字段: 数值」行（DCV / ACV / Resistance…）进 <strong>Specification</strong> 表格，
+            <code>Description</code> 之后的特性行（LCD size / Diode test / Backlight…）进 <strong>Overview</strong> 的 Key Features，
+            其中 DCV / ACV / Resistance 还会单独显示在 <strong>Information</strong> 里；<code>packaging</code> 原文进 <strong>General</strong>。
+            详情见下方示例（可直接复制改数值）。没有 <code>info.json</code> 的产品会继续用空选项卡。
+        </p>
 
         <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data" style="max-width:680px" id="ew-import-form">
             <input type="hidden" name="action" value="ew_product_import">
@@ -1183,7 +1392,7 @@ function ew_render_product_import() {
             <table class="form-table" role="presentation">
                 <tr>
                     <th scope="row">ZIP 文件</th>
-                    <td><input type="file" name="ew_import_zip[]" accept=".zip" multiple required><p class="description">可一次选择多个 ZIP（例如把大素材拆成几个包，避开单文件 300M 上限）。</p></td>
+                    <td><input type="file" name="ew_import_zip[]" accept=".zip" multiple required><p class="description">可一次选择多个 ZIP。每个文件按 1 MB 分片、最多 3 路并发上传；网络中断后点击「继续导入」，刷新页面后重新选择同一文件并点击「开始导入」即可续传。</p></td>
                 </tr>
                 <tr>
                     <th scope="row">自动分类</th>
@@ -1211,6 +1420,15 @@ function ew_render_product_import() {
                         <label><input type="radio" name="ew_status" value="publish" checked> 发布</label>
                         &nbsp;
                         <label><input type="radio" name="ew_status" value="draft"> 草稿</label>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">重复型号</th>
+                    <td>
+                        <label><input type="radio" name="ew_duplicate" value="skip" checked> 跳过（不替换，保持原商品不变）</label>
+                        &nbsp;
+                        <label><input type="radio" name="ew_duplicate" value="replace"> 替换（覆盖原商品的图片和内容）</label>
+                        <p class="description">按同 SKU 判断重复。选「替换」会复用原商品的 ID 和网址，<strong>前台链接不变</strong>，只是把图片、标题、状态和参数刷新成新素材；新素材没带的文字字段会保留原值。</p>
                     </td>
                 </tr>
                 <?php if ( ! empty( $sync_lang_names ) ) : ?>
@@ -1249,10 +1467,24 @@ function ew_render_product_import() {
 
         <p id="ew-import-resume-wrap" style="display:none;max-width:680px">
             <button type="button" class="button button-primary" id="ew-import-resume">继续导入</button>
-            <span class="description">从上次完成的型号继续，不会重复建商品。</span>
+            <span class="description">从已上传的分片或已完成的型号继续。</span>
         </p>
 
         <div id="ew-live-results" style="max-width:960px"></div>
+
+        <div id="ew-import-json-example" style="max-width:960px;margin-top:32px">
+            <h2>info.json 示例（复制到型号文件夹里，改数值即可）</h2>
+            <p class="description">文件名用 <code>info.json</code>，保存为 UTF-8。没有它的型号，五个选项卡会保持为空（只有型号 / SKU / 分类能显示）。</p>
+            <textarea readonly rows="14" style="width:100%;max-width:680px;font-family:monospace;font-size:12px;background:#f6f7f7">{
+  "name": "DT6221 digital meter",
+  "details": "DCV: 400mV~600V ±1.8%\nACV: 4V~600V ±2.0%\nDCA: 400uA,4000uA,40MA,200MA ±1.4%\nResistance: 400Ω~40MΩ ±1.2%\nFrequency: 10Hz~4MHz ±0.7%\nCapacitance: 4nF~4mF ±3.5%\nDescription\nLCD size: 48x29mm\nMax display: 4000\nLow battery indication: yes\nDiode test: yes\nContinuity buzzer test: yes\nOverload protection: yes\nPower supply: two 1.5V AAA battery\nProduct size: 148×71×33mm\nProduct weight: about 155g\nStandard accessories: meter (with battery), manual",
+  "packaging": "Packing: color box\nPacking quantity: 60PCS/CTN\nCarton size: 51.5 X 35.5 X 31.5CM\nG.W. / N.W.: 17.06/16.38KG"
+}</textarea>
+            <p class="description">
+                <code>Description</code> 这一行是分界：<strong>上面</strong>的「字段: 数值」进 Specification 表格，<strong>下面</strong>的进 Overview 的 Key Features；
+                只有测电笔这类没有参数表的型号，才用 <code>product_information</code>（整段文字，会自动去掉 <code>1. 2.</code> 序号当特性显示）。
+            </p>
+        </div>
 
         <script>
         (function () {
@@ -1266,7 +1498,9 @@ function ew_render_product_import() {
             var fill = document.getElementById('ew-progress-fill');
             var txt = document.getElementById('ew-progress-text');
             var out = document.getElementById('ew-live-results');
-            var t0 = 0, jobId = '', nonce = '', allResults = [], dry = false;
+            var jobId = '', nonce = '', allResults = [], completedResults = [], dry = false;
+            var files = [], fileIndex = 0, currentUpload = '', uploading = false;
+            var chunkSize = 1024 * 1024, concurrency = 3;
 
             function esc(s) {
                 return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -1288,8 +1522,9 @@ function ew_render_product_import() {
                 var html = '<h2>本次导入结果</h2><table class="widefat striped" style="max-width:960px"><thead><tr><th>型号</th><th>状态</th><th>分类</th><th>图片</th><th>链接</th></tr></thead><tbody>';
                 allResults.forEach(function (r) {
                     var st = r.skip ? '<span style="color:#2271ae">跳过</span> · ' + esc(r.msg)
+                        : (r.replaced ? '<span style="color:#b35d00">已替换</span> · ' + esc(r.msg)
                         : r.ok ? '<span style="color:#00a32a">成功</span>'
-                        : '<span style="color:#d63638">失败</span> · ' + esc(r.msg);
+                        : '<span style="color:#d63638">失败</span> · ' + esc(r.msg));
                     var img = r.ok && !r.skip ? esc(r.msg) : '';
                     var link = '';
                     if (r.url) { link += '<a href="' + esc(r.url) + '" target="_blank">查看</a>&nbsp;'; }
@@ -1364,13 +1599,20 @@ function ew_render_product_import() {
                         showError(data.error, false);
                         return;
                     }
-                    allResults = data.results || allResults;
+                    if (data.busy) { setTimeout(processNext, 1500); return; }
+                    allResults = completedResults.concat(data.results || []);
                     dry = !!data.dry;
                     setProgress(data.done_models, data.total_models, data.current);
                     paint(!!data.done);
                     if (data.done) {
                         fill.style.width = '100%';
                         txt.textContent = '处理完成，共 ' + allResults.length + ' 个型号。';
+                        completedResults = allResults;
+                        if (files[fileIndex]) { localStorage.removeItem(uploadKey(files[fileIndex])); }
+                        fileIndex++;
+                        jobId = '';
+                        currentUpload = '';
+                        if (fileIndex < files.length) { startFile(); return; }
                         btn.disabled = false;
                         if (resumeBtn) { resumeBtn.disabled = false; }
                         return;
@@ -1383,73 +1625,142 @@ function ew_render_product_import() {
                 xhr.send(fd);
             }
 
+            function uploadKey(file) {
+                return 'ew-product-upload:' + file.name + ':' + file.size + ':' + file.lastModified;
+            }
+            function request(data, blob, progress) {
+                return new Promise(function (resolve, reject) {
+                    var fd = new FormData();
+                    fd.append('action', 'ew_product_import_upload');
+                    fd.append('ew_import_nonce', nonce);
+                    Object.keys(data).forEach(function (key) { fd.append(key, data[key]); });
+                    if (blob) { fd.append('chunk', blob, 'part.bin'); }
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', form.getAttribute('action'), true);
+                    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                    xhr.timeout = 60000;
+                    if (progress) { xhr.upload.onprogress = progress; }
+                    xhr.onload = function () {
+                        var result = parseJson(xhr);
+                        if (xhr.status >= 200 && xhr.status < 300 && result && result.ok) { resolve(result); }
+                        else {
+                            var error = new Error(result && result.error ? result.error : '服务器返回异常（HTTP ' + xhr.status + '）');
+                            error.expired = !!(result && result.expired);
+                            reject(error);
+                        }
+                    };
+                    xhr.onerror = function () { reject(new Error('网络连接中断')); };
+                    xhr.ontimeout = function () { reject(new Error('上传超时')); };
+                    xhr.send(fd);
+                });
+            }
+            function retry(fn) {
+                var attempt = 0;
+                function run() {
+                    return fn().catch(function (error) {
+                        if (++attempt >= 5 || /权限|安全校验|无效|已过期/.test(error.message)) { throw error; }
+                        return new Promise(function (resolve) { setTimeout(resolve, Math.min(10000, 700 * Math.pow(2, attempt))); }).then(run);
+                    });
+                }
+                return run();
+            }
+            function uploadFile(file, saved) {
+                var key = uploadKey(file), parts = Math.ceil(file.size / chunkSize);
+                var session = saved && saved.upload ? request({ op: 'status', upload: saved.upload }).then(function (data) {
+                    if (data.name !== file.name || data.size !== file.size || data.parts !== parts) { throw new Error('所选文件与上次上传的文件不一致。'); }
+                    return data.job ? { upload: saved.upload, job: data.job, dry: data.dry } : { upload: saved.upload, received: data.received || [] };
+                }).catch(function (error) {
+                    if (!error.expired) { throw error; }
+                    return request({ op: 'start', name: file.name, size: file.size, parts: parts });
+                }) : request({ op: 'start', name: file.name, size: file.size, parts: parts });
+                return session.then(function (data) {
+                    currentUpload = data.upload;
+                    if (data.job) { return data; }
+                    localStorage.setItem(key, JSON.stringify({ upload: currentUpload }));
+                    var received = {}, completed = 0, pending = [], activeBytes = {};
+                    (data.received || []).forEach(function (i) { received[i] = true; completed += Math.min(chunkSize, file.size - i * chunkSize); });
+                    for (var i = 0; i < parts; i++) { if (!received[i]) { pending.push(i); } }
+                    function paintUpload() {
+                        var inFlight = Object.keys(activeBytes).reduce(function (n, k) { return n + activeBytes[k]; }, 0);
+                        var loaded = Math.min(file.size, completed + inFlight);
+                        fill.style.width = Math.round(loaded * 100 / file.size) + '%';
+                        txt.textContent = '上传 ' + (fileIndex + 1) + '/' + files.length + '：' + file.name + ' · ' + mb(loaded) + ' / ' + mb(file.size) + '（3 路并发）';
+                    }
+                    paintUpload();
+                    function worker() {
+                        var index = pending.shift();
+                        if (index === undefined) { return Promise.resolve(); }
+                        var from = index * chunkSize, to = Math.min(file.size, from + chunkSize);
+                        return retry(function () {
+                            return request({ op: 'part', upload: currentUpload, index: index }, file.slice(from, to), function (ev) {
+                                activeBytes[index] = ev.loaded;
+                                paintUpload();
+                            });
+                        }).then(function () {
+                            delete activeBytes[index];
+                            completed += to - from;
+                            paintUpload();
+                            return worker();
+                        });
+                    }
+                    return Promise.all(Array.from({ length: Math.min(concurrency, pending.length) }, worker)).then(function () {
+                        txt.textContent = '上传完成，服务器正在解压 ZIP…';
+                        return retry(function () {
+                            var fields = { op: 'finish', upload: currentUpload };
+                            new FormData(form).forEach(function (value, name) {
+                                if (name !== 'ew_import_zip[]' && name !== 'ew_import_nonce' && name !== 'action') { fields[name] = value; }
+                            });
+                            return request(fields);
+                        });
+                    });
+                });
+            }
+            function startFile() {
+                if (fileIndex >= files.length || uploading) { return; }
+                var file = files[fileIndex], key = uploadKey(file), saved = null;
+                try { saved = JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) {}
+                if (saved && saved.job) {
+                    jobId = saved.job;
+                    txt.textContent = '继续处理 ' + file.name + '…';
+                    processNext();
+                    return;
+                }
+                uploading = true;
+                uploadFile(file, saved).then(function (data) {
+                    uploading = false;
+                    jobId = data.job;
+                    dry = !!data.dry;
+                    localStorage.setItem(key, JSON.stringify({ upload: currentUpload, job: jobId }));
+                    fill.style.width = '5%';
+                    processNext();
+                }).catch(function (error) {
+                    uploading = false;
+                    showError('上传暂停：' + error.message + '。检查网络后点击「继续导入」；重新打开页面时，请重新选择同一 ZIP 文件。', true);
+                });
+            }
             form.addEventListener('submit', function (e) {
                 if (!fileInput.files || !fileInput.files.length) { return; }
                 e.preventDefault();
+                files = Array.prototype.slice.call(fileInput.files);
+                fileIndex = 0;
                 jobId = '';
                 allResults = [];
+                completedResults = [];
                 dry = false;
                 nonce = form.querySelector('[name="ew_import_nonce"]').value;
                 resumeWrap.style.display = 'none';
-                var fd = new FormData(form);
-                var xhr = new XMLHttpRequest();
                 btn.disabled = true;
                 out.innerHTML = '';
                 bar.style.display = 'block';
                 fill.style.width = '0%';
-                txt.textContent = '准备上传…';
-                t0 = Date.now();
-                xhr.upload.onprogress = function (ev) {
-                    if (ev.lengthComputable) {
-                        var pct = Math.round(ev.loaded * 100 / ev.total);
-                        fill.style.width = pct + '%';
-                        txt.textContent = '已上传 ' + pct + '%（' + mb(ev.loaded) + ' / ' + mb(ev.total) + '）…';
-                    } else {
-                        txt.textContent = '已上传 ' + mb(ev.loaded) + '…';
-                    }
-                };
-                xhr.upload.onload = function () {
-                    fill.style.width = '5%';
-                    txt.textContent = '上传完成，服务器正在解压 ZIP…';
-                };
-                xhr.onload = function () {
-                    var data = parseJson(xhr);
-                    var secs = ((Date.now() - t0) / 1000).toFixed(1);
-                    if (!data) {
-                        showError('服务器返回异常（' + secs + ' 秒）：' + String(xhr.responseText || '').slice(0, 200), false);
-                        return;
-                    }
-                    if (data.error) {
-                        showError(data.error, false);
-                        return;
-                    }
-                    if (data.job) {
-                        jobId = data.job;
-                        dry = !!data.dry;
-                        fill.style.width = '5%';
-                        txt.textContent = '服务器正在解压 ZIP…';
-                        processNext();
-                        return;
-                    }
-                    // 兼容旧的非任务响应
-                    allResults = data.results || [];
-                    dry = !!data.dry;
-                    paint(true);
-                    fill.style.width = '100%';
-                    txt.textContent = '处理完成，用时 ' + secs + ' 秒。';
-                    btn.disabled = false;
-                };
-                xhr.onerror = function () { showError('上传失败（网络错误）。', false); };
-                xhr.open('POST', form.getAttribute('action'), true);
-                xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-                xhr.send(fd);
+                startFile();
             });
-
             if (resumeBtn) {
                 resumeBtn.addEventListener('click', function () {
-                    if (!jobId) { return; }
                     resumeWrap.style.display = 'none';
-                    processNext();
+                    if (jobId) { processNext(); }
+                    else if (files.length) { startFile(); }
+                    else { showError('请重新选择原来的 ZIP 文件，然后点击「开始导入」。', false); }
                 });
             }
         })();
