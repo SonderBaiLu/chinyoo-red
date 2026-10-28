@@ -24,8 +24,8 @@ $render_children = function ( $parent ) use ( &$render_children, $current ) {
     echo '</ul>';
 };
 ?>
-<details class="catalog-navigation" open>
-    <summary><?php ew_esc_html_e( 'Categories' ); ?> <span aria-hidden="true">⌄</span></summary>
+<div class="catalog-navigation">
+    <h2 class="catalog-navigation__title"><?php ew_esc_html_e( 'Categories' ); ?></h2>
     <nav class="catalog-nav" aria-label="<?php ew_esc_attr_e( 'Product Categories' ); ?>">
         <?php
         $shop_url = function_exists( 'ew_shop_url' ) ? ew_shop_url() : ( function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'shop' ) : get_post_type_archive_link( 'product' ) );
@@ -47,4 +47,4 @@ $render_children = function ( $parent ) use ( &$render_children, $current ) {
             </div>
         <?php endforeach; ?>
     </nav>
-</details>
+</div>
