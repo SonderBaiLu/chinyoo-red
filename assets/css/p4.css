@@ -139,21 +139,18 @@ a.cert:hover{background:var(--primary)}
 .series-select select{width:100%;padding:10px 12px;border:1px solid var(--ew-border-strong);border-radius:var(--r-md);background:#fff;color:var(--ew-text);font-size:var(--fs-lg)}
 .series-select select:focus{outline:none;border-color:var(--ew-accent);box-shadow:0 0 0 3px var(--ew-accent-soft)}
 
-/* 图库（single-product.php 左列）— YITH Magnifier,UNI-T 同款结构。
-   主图:img 撑满列宽;lens/放大窗由 yith-magnifier.css + 插件 JS 动态创建。 */
+/* 图库（single-product.php 左列）
+   主图 img 撑满列宽；点击主图打开全尺寸图片。 */
 .product-gallery{margin-bottom:24px}
 .images .woocommerce-product-gallery__image{width:100%}
 .images .yith_magnifier_zoom img{width:100%;height:auto;display:block;cursor:zoom-in}
 
-/* 缩略图:基础布局在 yith-frontend.css,这里加 active 高亮 */
+/* 缩略图与当前图片高亮 */
 .yith_magnifier_gallery{margin:14px 0 0;padding:0;list-style:none}
 .yith_magnifier_gallery li{vertical-align:top}
 .yith_magnifier_gallery li a{display:block;overflow:hidden;border:2px solid transparent;border-radius:var(--r-sm);line-height:0;transition:border-color .15s ease}
 .yith_magnifier_gallery li a img{width:100%;height:auto}
 .yith_magnifier_gallery li.active-thumbnail a{border-color:var(--ew-accent)}
-
-/* 触摸/窄屏无 hover → 隐藏放大层,避免撑破布局 */
-@media (hover:none),(max-width:900px){.yith_magnifier_zoom_magnifier,.yith_magnifier_lens{display:none!important}}
 
 /* ----------------------------------------------------------------
    Contact 页

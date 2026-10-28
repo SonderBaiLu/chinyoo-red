@@ -191,17 +191,37 @@ $ew_org_home = ( function_exists('pll_home_url') && function_exists('pll_default
 <a class="fab" href="https://wa.me/8617816800511" target="_blank" rel="noopener" title="WhatsApp">WA</a>
 
 <!-- Lightbox Modal -->
-<div class="lightbox-overlay" id="lightbox-overlay" onclick="closeLightbox()">
-	<span class="lightbox-close">&times;</span>
+<div class="lightbox-overlay" id="lightbox-overlay" role="dialog" aria-modal="true" aria-label="<?php ew_esc_attr_e( 'Enlarged product image' ); ?>" aria-hidden="true" onclick="closeLightbox()">
+	<button type="button" class="lightbox-close" aria-label="<?php ew_esc_attr_e( 'Close image' ); ?>" onclick="event.stopPropagation(); closeLightbox()">&times;</button>
 	<img src="" alt="" id="lightbox-img" onclick="event.stopPropagation()">
 </div>
 <script>
 (function(){
 	var overlay = document.getElementById('lightbox-overlay');
 	var img = document.getElementById('lightbox-img');
-	window.openLightbox = function(src) { img.src = src; overlay.classList.add('active'); document.body.style.overflow = 'hidden'; };
-	window.closeLightbox = function() { overlay.classList.remove('active'); document.body.style.overflow = ''; };
-	document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeLightbox(); });
+	var close = overlay.querySelector('.lightbox-close');
+	var previousFocus = null;
+	window.openLightbox = function(src) {
+		previousFocus = document.activeElement;
+		img.src = src;
+		overlay.classList.add('active');
+		overlay.setAttribute('aria-hidden', 'false');
+		document.body.style.overflow = 'hidden';
+		close.focus();
+	};
+	window.closeLightbox = function() {
+		if (!overlay.classList.contains('active')) return;
+		overlay.classList.remove('active');
+		overlay.setAttribute('aria-hidden', 'true');
+		img.removeAttribute('src');
+		document.body.style.overflow = '';
+		if (previousFocus && previousFocus.focus) previousFocus.focus();
+	};
+	document.addEventListener('keydown', function(e) {
+		if (!overlay.classList.contains('active')) return;
+		if (e.key === 'Escape') closeLightbox();
+		if (e.key === 'Tab') { e.preventDefault(); close.focus(); }
+	});
 })();
 </script>
 </body>

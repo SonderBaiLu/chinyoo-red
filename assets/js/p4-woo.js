@@ -6,7 +6,7 @@
  * Features:
  *  1. Series model dropdown -> update URL (?attribute_pa_model=MODEL#Specifications)
  *  2. Inquiry CTA (.js-inquiry-cta[data-model]) -> fill #inquiry_product + scroll to #inquiry
- *  3. Gallery thumbnail switching (.gallery-thumb[data-src] -> #gallery-main-img)
+ *  3. Product gallery thumbnail switching and click-to-enlarge preview
  */
 (function ($) {
 	'use strict';
@@ -161,9 +161,7 @@
 		})();
 
 			/* ----------------------------------------------------------
-			   3) Product gallery — keep thumbnail changes reliable even
-			   when the optional magnifier plugin is unavailable. Clicking
-			   the hero image does nothing (no zoom / lightbox preview).
+			   3) Product gallery thumbnails and click-to-enlarge preview.
 			   ---------------------------------------------------------- */
 			$(document).on('click', '.product-gallery--premium .yith_magnifier_gallery a', function (e) {
 				e.preventDefault();
@@ -182,6 +180,9 @@
 
 			$(document).on('click', '.product-gallery--premium .woocommerce-main-image', function (e) {
 				e.preventDefault();
+				if (window.openLightbox && this.href) {
+					window.openLightbox(this.href);
+				}
 			});
 
 		/* ----------------------------------------------------------

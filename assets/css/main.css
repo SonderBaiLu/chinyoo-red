@@ -1675,6 +1675,8 @@ section {
 
 .lightbox-close {
     position: absolute;
+    border: 0;
+    background: transparent;
     top: 18px;
     right: 26px;
     color: #fff;
