@@ -18,10 +18,21 @@
  */
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
+/* 详情长图只用于前台 full 图和响应式大图，不需要商品卡片及 WooCommerce 缩略图。 */
+function ew_import_detail_image_sizes( $sizes ) {
+    return array_intersect_key( $sizes, array_flip( array( 'large', '1536x1536', '2048x2048' ) ) );
+}
+
+/* 商品图保留 WordPress 和 WooCommerce 常用尺寸；这些主题专用尺寸未被商品页面调用。 */
+function ew_import_catalog_image_sizes( $sizes ) {
+    unset( $sizes['product-card'], $sizes['product-main'], $sizes['hero-banner'] );
+    return $sizes;
+}
+
 /* ---------- 工具：把本地文件放进媒体库，返回 attachment ID ----------
    不走 wp_handle_upload（它只接受 HTTP $_FILES 直传）；
    直接把文件拷进 uploads 目录再插附件。 */
-function ew_import_attach_image( $local_path, $file_name, $post_id = 0 ) {
+function ew_import_attach_image( $local_path, $file_name, $post_id = 0, $role = 'general' ) {
     require_once ABSPATH . 'wp-admin/includes/file.php';
     require_once ABSPATH . 'wp-admin/includes/media.php';
     require_once ABSPATH . 'wp-admin/includes/image.php';
@@ -47,7 +58,13 @@ function ew_import_attach_image( $local_path, $file_name, $post_id = 0 ) {
     ), $dest, $post_id );
     if ( ! $att_id ) { @unlink( $dest ); return 0; }
 
-    $meta = wp_generate_attachment_metadata( $att_id, $dest );
+    $size_filter = 'detail' === $role ? 'ew_import_detail_image_sizes' : ( 'catalog' === $role ? 'ew_import_catalog_image_sizes' : '' );
+    if ( $size_filter ) { add_filter( 'intermediate_image_sizes_advanced', $size_filter, 10, 1 ); }
+    try {
+        $meta = wp_generate_attachment_metadata( $att_id, $dest );
+    } finally {
+        if ( $size_filter ) { remove_filter( 'intermediate_image_sizes_advanced', $size_filter, 10 ); }
+    }
     wp_update_attachment_metadata( $att_id, $meta );
     return $att_id;
 }
@@ -776,14 +793,14 @@ function ew_import_one_folder( $dir, $folder_name, $options ) {
     // 上传主图（第 1 张 = 缩略图；多张主图全部入库，保证图片不丢）
     $main_ids = array();
     foreach ( $main as $m ) {
-        $aid = ew_import_attach_image( $m, $folder_name . '-白底图', $prod_id );
+        $aid = ew_import_attach_image( $m, $folder_name . '-白底图', $prod_id, 'catalog' );
         if ( $aid ) { $main_ids[] = $aid; }
     }
     // 上传画廊
     $gallery_ids = $main_ids;
     foreach ( $gallery as $group ) {
         foreach ( $group as $g ) {
-            $aid = ew_import_attach_image( $g, $folder_name . '-展示图', $prod_id );
+            $aid = ew_import_attach_image( $g, $folder_name . '-展示图', $prod_id, 'catalog' );
             if ( $aid ) { $gallery_ids[] = $aid; }
         }
     }
@@ -791,7 +808,7 @@ function ew_import_one_folder( $dir, $folder_name, $options ) {
     $scene_ids = array();
     foreach ( $scene as $group ) {
         foreach ( $group as $s ) {
-            $aid = ew_import_attach_image( $s, $folder_name . '-使用场景图', $prod_id );
+            $aid = ew_import_attach_image( $s, $folder_name . '-使用场景图', $prod_id, 'catalog' );
             if ( $aid ) { $scene_ids[] = $aid; $gallery_ids[] = $aid; }
         }
     }
@@ -811,13 +828,15 @@ function ew_import_one_folder( $dir, $folder_name, $options ) {
     // 详情长图：按语言分别入库（en / cn）
     $detail_map = array();
     $de_ids = array();
+    $detail_ids_by_path = array();
     foreach ( $detail_en as $d ) {
-        $aid = ew_import_attach_image( $d, $folder_name . '-详细参数图-en', $prod_id );
-        if ( $aid ) { $de_ids[] = $aid; }
+        $aid = ew_import_attach_image( $d, $folder_name . '-详细参数图-en', $prod_id, 'detail' );
+        if ( $aid ) { $de_ids[] = $aid; $detail_ids_by_path[ $d ] = $aid; }
     }
     $dc_ids = array();
     foreach ( $detail_cn as $d ) {
-        $aid = ew_import_attach_image( $d, $folder_name . '-详细参数图-cn', $prod_id );
+        // 未标语言的同一张图同时用于英文和中文，无需复制及生成两次缩略图。
+        $aid = isset( $detail_ids_by_path[ $d ] ) ? $detail_ids_by_path[ $d ] : ew_import_attach_image( $d, $folder_name . '-详细参数图-cn', $prod_id, 'detail' );
         if ( $aid ) { $dc_ids[] = $aid; }
     }
     if ( ! empty( $de_ids ) ) { $detail_map['en'] = $de_ids; }
@@ -1152,7 +1171,7 @@ function ew_handle_product_import_process() {
 
     $job  = ew_import_run_job_batch( $job, 35 );
     $done = ! empty( $job['done'] );
-    $last = ! empty( $job['results'] ) ? end( $job['results'] ) : null;
+    $current_item = ! $done && isset( $job['queue'][ $job['index'] ] ) ? $job['queue'][ $job['index'] ] : null;
 
     $payload = array(
         'ok'           => true,
@@ -1160,7 +1179,7 @@ function ew_handle_product_import_process() {
         'done_models'  => (int) $job['done_models'],
         'total_models' => (int) $job['total_models'],
         'results'      => array_values( $job['results'] ),
-        'current'      => ( $last && isset( $last['name'] ) ) ? (string) $last['name'] : '',
+        'current'      => ( $current_item && isset( $current_item['name'] ) ) ? (string) $current_item['name'] : '',
         'dry'          => ! empty( $job['options']['dry'] ),
         'error'        => '',
     );
@@ -1355,136 +1374,149 @@ function ew_render_product_import() {
         }
     }
     ?>
+    <style>
+    .ew-product-import{--ew-navy:#14273e;--ew-ink:#1c314b;--ew-muted:#64748b;--ew-line:#e2e9f1;--ew-blue:#1463a5;--ew-sky:#e9f5ff;max-width:1240px;margin:20px 20px 50px 0;color:var(--ew-ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    .ew-product-import *{box-sizing:border-box}
+    .ew-product-import .ew-hero{position:relative;overflow:hidden;display:flex;justify-content:space-between;gap:24px;align-items:center;padding:31px 36px;border-radius:20px;background:radial-gradient(circle at 90% -30%,#2c87ab 0,transparent 36%),linear-gradient(120deg,#14273e,#214c66);color:#fff;box-shadow:0 16px 30px rgba(19,43,68,.15)}
+    .ew-product-import .ew-hero:after{content:"";position:absolute;width:250px;height:250px;right:7%;bottom:-180px;border:1px solid rgba(255,255,255,.2);border-radius:50%;box-shadow:0 0 0 42px rgba(255,255,255,.035),0 0 0 95px rgba(255,255,255,.025);pointer-events:none}
+    .ew-product-import .ew-eyebrow{display:inline-flex;align-items:center;gap:8px;margin-bottom:11px;color:#99d9e8;font-size:11px;font-weight:800;letter-spacing:.15em;text-transform:uppercase}
+    .ew-product-import .ew-eyebrow:before{content:"";width:7px;height:7px;border-radius:50%;background:#60dbbd}
+    .ew-product-import .ew-hero h1{color:#fff;margin:0 0 10px;font-size:30px;line-height:1.2;font-weight:750;letter-spacing:-.02em}
+    .ew-product-import .ew-hero p{max-width:630px;margin:0;color:#d5e7ef;font-size:14px;line-height:1.8}
+    .ew-product-import .ew-hero-mark{display:grid;place-items:center;flex:0 0 90px;height:90px;border:1px solid rgba(255,255,255,.3);border-radius:24px;background:rgba(255,255,255,.09);transform:rotate(-8deg)}
+    .ew-product-import .ew-hero-mark .dashicons{font-size:47px;width:47px;height:47px;transform:rotate(8deg)}
+    .ew-product-import .ew-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}
+    .ew-product-import .ew-step{display:flex;gap:11px;align-items:center;padding:13px 17px;border:1px solid var(--ew-line);border-radius:12px;background:#fff;color:#607187;font-size:12px;font-weight:650}
+    .ew-product-import .ew-step b{display:grid;place-items:center;flex:none;width:24px;height:24px;border-radius:7px;background:#eaf1f8;color:#1a649c;font-size:12px}
+    .ew-product-import .ew-step:first-child{border-color:#c8e0ef;color:#174b73;background:#f3faff}
+    .ew-product-import .ew-step:first-child b{background:#1e78ac;color:#fff}
+    .ew-product-import .ew-layout{display:grid;grid-template-columns:minmax(0,1.38fr) minmax(310px,.86fr);align-items:start;gap:18px}
+    .ew-product-import .ew-card{border:1px solid var(--ew-line);border-radius:18px;background:#fff;box-shadow:0 5px 22px rgba(26,53,78,.055)}
+    .ew-product-import .ew-card-body{padding:24px}
+    .ew-product-import .ew-card-heading{display:flex;align-items:start;justify-content:space-between;gap:12px;margin-bottom:21px}
+    .ew-product-import .ew-card-heading h2{margin:0 0 5px;font-size:19px;line-height:1.3;color:var(--ew-navy)}
+    .ew-product-import .ew-card-heading p{margin:0;color:var(--ew-muted);font-size:13px;line-height:1.6}
+    .ew-product-import .ew-chip{display:inline-block;flex:none;padding:6px 10px;border-radius:20px;background:#eaf4fb;color:#24658a;font-size:11px;font-weight:800}
+    .ew-product-import .ew-dropzone{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:222px;padding:24px;text-align:center;border:2px dashed #acc9db;border-radius:14px;background:linear-gradient(155deg,#f5fbff,#f9fcff);transition:.2s ease;cursor:pointer}
+    .ew-product-import .ew-dropzone:hover,.ew-product-import .ew-dropzone.is-dragging{border-color:#1686b8;background:#eaf7ff;transform:translateY(-1px)}
+    .ew-product-import .ew-drop-icon{display:grid;place-items:center;width:56px;height:56px;margin-bottom:13px;border-radius:16px;background:#e4f1fa;color:#2078ac}
+    .ew-product-import .ew-drop-icon .dashicons{width:27px;height:27px;font-size:27px}
+    .ew-product-import .ew-dropzone strong{display:block;color:#18364f;font-size:16px}
+    .ew-product-import .ew-dropzone small{display:block;margin:6px 0 14px;color:#687d90;font-size:12px}
+    .ew-product-import .ew-pick{display:inline-block;padding:8px 16px;border:1px solid #aed3ea;border-radius:8px;background:#fff;color:#12629a;font-size:12px;font-weight:750}
+    .ew-product-import .ew-file-input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip-path:inset(50%)}
+    .ew-product-import .ew-dropzone:focus-within{outline:2px solid #2271b1;outline-offset:3px}
+    .ew-product-import .ew-selected{min-height:58px;margin-top:15px}
+    .ew-product-import .ew-selected-empty{display:flex;align-items:center;gap:8px;margin:0;color:#708298;font-size:12px}
+    .ew-product-import .ew-selected-empty .dashicons{color:#83a1b6}
+    .ew-product-import .ew-file-row{display:flex;align-items:center;gap:11px;padding:10px 12px;margin-top:7px;border:1px solid #e5edf4;border-radius:9px;background:#fbfdff}
+    .ew-product-import .ew-file-row .dashicons{color:#2180a6}
+    .ew-product-import .ew-file-row span:nth-child(2){min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:650}
+    .ew-product-import .ew-file-row small{color:#708298}
+    .ew-product-import .ew-actions{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px 24px;border-top:1px solid #e9eef4;background:#fbfdff;border-radius:0 0 18px 18px}
+    .ew-product-import .ew-actions p{margin:0;color:#718299;font-size:12px;line-height:1.5}
+    .ew-product-import #ew-import-btn{display:inline-flex;align-items:center;gap:7px;min-height:42px;padding:0 19px;border:0;border-radius:9px;background:#1476aa;color:#fff;font-size:13px;font-weight:750;box-shadow:0 5px 11px rgba(20,118,170,.18);cursor:pointer;white-space:nowrap}
+    .ew-product-import #ew-import-btn:hover{background:#0e648f}
+    .ew-product-import #ew-import-btn:disabled{opacity:.55;cursor:default}
+    .ew-product-import #ew-import-btn .dashicons{font-size:18px;width:18px;height:18px}
+    .ew-product-import .ew-field{padding:13px 0;border-bottom:1px solid #edf1f5}
+    .ew-product-import .ew-field:first-of-type{padding-top:0}
+    .ew-product-import .ew-field:last-child{border:0;padding-bottom:0}
+    .ew-product-import .ew-field-title{display:block;margin-bottom:9px;color:#29445c;font-size:12px;font-weight:800}
+    .ew-product-import .ew-field select,.ew-product-import .ew-field textarea{width:100%;max-width:none;border-color:#d8e3eb;border-radius:8px}
+    .ew-product-import .ew-field select{min-height:36px}
+    .ew-product-import .ew-choice-row{display:flex;gap:7px;flex-wrap:wrap}
+    .ew-product-import .ew-choice{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border:1px solid #dce5ed;border-radius:8px;background:#fff;color:#42586d;font-size:12px;cursor:pointer}
+    .ew-product-import .ew-choice:has(input:checked){border-color:#76b8dc;background:#eef8fe;color:#175d85;font-weight:750}
+    .ew-product-import .ew-choice input{margin:0}
+    .ew-product-import .ew-help{margin:7px 0 0;color:#708298;font-size:11px;line-height:1.6}
+    .ew-product-import .ew-extra{margin-top:18px;padding:0 24px;border:1px solid var(--ew-line);border-radius:15px;background:#fff}
+    .ew-product-import .ew-extra summary{display:flex;align-items:center;justify-content:space-between;list-style:none;cursor:pointer;padding:19px 0;font-size:14px;font-weight:800;color:#23435d}
+    .ew-product-import .ew-extra summary::-webkit-details-marker{display:none}
+    .ew-product-import .ew-extra summary:after{content:"＋";font-size:20px;line-height:1;color:#5889a7}
+    .ew-product-import .ew-extra[open] summary:after{content:"−"}
+    .ew-product-import .ew-extra-body{border-top:1px solid #eaf0f5;padding:5px 0 22px}
+    .ew-product-import .ew-extra .ew-field{max-width:760px}
+    .ew-product-import .ew-extra textarea{min-height:120px;font-family:ui-monospace,SFMono-Regular,monospace;font-size:12px}
+    .ew-product-import #ew-progress{padding:23px 25px;margin:20px 0 0;border:1px solid #c9e1ef;border-radius:16px;background:#f7fcff;box-shadow:0 5px 18px rgba(20,82,124,.05)}
+    .ew-product-import .ew-progress-label{margin:0 0 12px;color:#215a7b;font-size:13px;font-weight:800}
+    .ew-product-import #ew-progress-track{height:12px;overflow:hidden;border-radius:20px;background:#e0edf5}
+    .ew-product-import #ew-progress-fill{height:100%;width:0;border-radius:20px;background:linear-gradient(90deg,#2080b2,#2bb6a1);transition:width .25s ease}
+    .ew-product-import #ew-progress-text{margin:12px 0 0;color:#37586d;font-size:13px;font-weight:650}
+    .ew-product-import #ew-import-resume-wrap{display:flex;align-items:center;gap:13px;margin:12px 0;padding:14px 17px;border:1px solid #cbe2ef;border-radius:11px;background:#f2faff}
+    .ew-product-import #ew-live-results{margin-top:20px;overflow-x:auto}
+    .ew-product-import #ew-live-results .widefat{border-radius:10px;overflow:hidden;border-color:#dbe6ed}
+    .ew-product-import #ew-live-results th{background:#eef5fa}
+    .ew-product-import .ew-guide{margin-top:26px}
+    .ew-product-import .ew-guide h2{margin:0 0 5px;color:var(--ew-navy);font-size:20px}
+    .ew-product-import .ew-guide>p{margin:0 0 13px;color:#718299;font-size:12px}
+    .ew-product-import .ew-guide .ew-extra{margin-top:9px}
+    .ew-product-import .ew-guide-table{width:100%;border-collapse:collapse;font-size:12px}
+    .ew-product-import .ew-guide-table th,.ew-product-import .ew-guide-table td{padding:11px;border-bottom:1px solid #edf1f5;text-align:left;vertical-align:top}
+    .ew-product-import .ew-guide-table th{color:#4a657a;font-weight:800}
+    .ew-product-import .ew-guide code{border-radius:4px;background:#f1f5f9;color:#34627d}
+    .ew-product-import .ew-json-example{width:100%;max-width:760px;min-height:220px;padding:14px;border:1px solid #dfe8ef;border-radius:9px;background:#f7f9fc;font:12px/1.6 ui-monospace,SFMono-Regular,monospace}
+    @media(max-width:1050px){.ew-product-import .ew-layout{grid-template-columns:1fr}.ew-product-import .ew-settings .ew-card-body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:24px}.ew-product-import .ew-settings .ew-card-heading{grid-column:1/-1}}
+    @media(max-width:680px){.ew-product-import{margin-right:10px}.ew-product-import .ew-hero{padding:25px}.ew-product-import .ew-hero h1{font-size:25px}.ew-product-import .ew-hero-mark{display:none}.ew-product-import .ew-steps{grid-template-columns:1fr;gap:6px}.ew-product-import .ew-step{padding:9px 12px}.ew-product-import .ew-settings .ew-card-body{display:block}.ew-product-import .ew-card-body{padding:19px}.ew-product-import .ew-actions{align-items:stretch;flex-direction:column;padding:16px 19px}.ew-product-import #ew-import-btn{justify-content:center}.ew-product-import .ew-extra{padding:0 18px}}
+    </style>
     <div class="wrap ew-product-import">
-        <h1>商品一键导入</h1>
-        <p>上传 ZIP 压缩包，里面<strong>每个子文件夹 = 一个产品型号</strong>，文件夹内按命名放图，系统自动建商品并映射图片。图片<strong>可放在子文件夹里</strong>（会递归识别）；直接压缩「型号文件夹的上一级目录」也可以（会自动跳过外层包装目录）。ZIP 里套的 ZIP（如 01.zip 这类批次包）也能识别；同 SKU 已存在时默认跳过（不重复创建）；文件夹名含「暂不处理」的整夹跳过。</p>
+        <header class="ew-hero">
+            <div><span class="ew-eyebrow">PRODUCT IMPORT STUDIO</span><h1>商品批量导入</h1><p>将商品素材打包为 ZIP，一次选择多个文件。系统依次上传、识别型号并创建商品；进度可在刷新后继续。</p></div>
+            <span class="ew-hero-mark" aria-hidden="true"><span class="dashicons dashicons-upload"></span></span>
+        </header>
         <?php echo $notice; ?>
         <?php if ( $expired ) { echo '<div class="notice notice-error is-dismissible"><p>导入结果已过期（超过 1 小时），请重新导入。</p></div>'; } ?>
+        <div class="ew-steps" aria-label="导入流程"><div class="ew-step"><b>1</b> 选择 ZIP 文件</div><div class="ew-step"><b>2</b> 确认导入设置</div><div class="ew-step"><b>3</b> 查看进度与结果</div></div>
 
-        <table class="widefat striped" style="max-width:960px;margin-bottom:24px">
-            <thead><tr><th style="width:62%">文件命名约定（大小写/空格不敏感）</th><th>对应位置</th></tr></thead>
-            <tbody>
-                <tr><td>文件夹名（如 <code>XT266C</code>）</td><td>产品型号 / 商品名称 / SKU</td></tr>
-                <tr><td><code>白底图</code> / <code>底图</code> / <code>主图</code>（如 <code>A830L_底图_01</code>）</td><td>主图（缩略图）+ Product Details 第 1 张</td></tr>
-                <tr><td><code>详细参数图</code> / <code>详细信息图</code> / <code>详情图</code> …（如 <code>详细参数图 - 英文版.png</code>）</td><td>Product Details 第 2 张（详情长图）</td></tr>
-                <tr><td><code>使用场景图</code> / <code>场景图N</code>（如 <code>使用场景图.jpg</code>）</td><td>Product Details 第 3 张（同时进画廊）</td></tr>
-                <tr><td><code>展示图N</code> / <code>轮播图N</code>（如 <code>展示图1.jpg</code>）</td><td>画廊图（按编号排序）</td></tr>
-                <tr><td>文件夹内的 <code>info.json</code>（或 <code>参数c.json</code>）</td><td>Overview / Information / Specification / General 选项卡的文本</td></tr>
-            </tbody>
-        </table>
-        <p class="description" style="max-width:960px;margin-top:-12px">
-            <strong>Product Details 固定三张：</strong>白底图 → 商品详细信息图 → 使用场景图。
-            <strong>多语言：</strong>详情长图会按文件名里的语言字样分开入库——
-            含「<code>英文 / English / _en</code>」的进 <strong>英文页</strong>，含「<code>中文 / _cn</code>」的进 <strong>中文页</strong>；
-            没有语言字样的详情图会同时给英文和中文页。其它语言（es/ru/ar）前台自动回退英文详情。
-        </p>
-        <p class="description" style="max-width:960px;margin-top:-12px">
-            <strong>五个选项卡怎么填：</strong>在型号文件夹里放 <code>info.json</code>，里面写两个字段即可——<code>details</code>（规格 + 特性）和 <code>packaging</code>（包装）。导入时会自动解析成：
-            <code>details</code> 里 <code>Description</code> 之前的「字段: 数值」行（DCV / ACV / Resistance…）进 <strong>Specification</strong> 表格，
-            <code>Description</code> 之后的特性行（LCD size / Diode test / Backlight…）进 <strong>Overview</strong> 的 Key Features，
-            其中 DCV / ACV / Resistance 还会单独显示在 <strong>Information</strong> 里；<code>packaging</code> 原文进 <strong>General</strong>。
-            详情见下方示例（可直接复制改数值）。没有 <code>info.json</code> 的产品会继续用空选项卡。
-        </p>
-
-        <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data" style="max-width:680px" id="ew-import-form">
+        <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data" id="ew-import-form">
             <input type="hidden" name="action" value="ew_product_import">
             <?php wp_nonce_field( 'ew_product_import', 'ew_import_nonce' ); ?>
-            <table class="form-table" role="presentation">
-                <tr>
-                    <th scope="row">ZIP 文件</th>
-                    <td><input type="file" name="ew_import_zip[]" accept=".zip" multiple required><p class="description">可一次选择多个 ZIP。每个文件按 1 MB 分片、最多 3 路并发上传；网络中断后点击「继续导入」，刷新页面后重新选择同一文件并点击「开始导入」即可续传。</p></td>
-                </tr>
-                <tr>
-                    <th scope="row">自动分类</th>
-                    <td>
-                        <label><input type="checkbox" name="ew_cat_auto" value="1" checked> 按型号自动识别产品分类</label>
-                        <p class="description">识别依据：文件夹名（如 <code>144_VC16B digital multimeter</code>）→ <code>info.json</code> 的 name → <code>生成记录.txt</code>。
-                        可识别：万用表 / 钳形表 / 测电笔 / 温度计 / 电池测试仪 / 插座测试仪。想在单个文件夹里强制指定，就放一个 <code>分类.txt</code>，写一行分类名（如「钳形表」或 <code>clamp-meters</code>）。</p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row">兜底分类</th>
-                    <td>
-                        <select name="ew_cat_id">
-                            <option value="0" <?php selected( $default_cat_id, 0 ); ?>>不分类</option>
-                            <?php foreach ( $cats as $c ) : ?>
-                                <option value="<?php echo (int) $c->term_id; ?>" <?php selected( $default_cat_id, (int) $c->term_id ); ?>><?php echo esc_html( $c->name ); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                        <p class="description">自动识别不出来的型号，统一挂到这里（默认 Other Instruments）；关掉「自动分类」时所有型号都用这个分类。</p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row">商品状态</th>
-                    <td>
-                        <label><input type="radio" name="ew_status" value="publish" checked> 发布</label>
-                        &nbsp;
-                        <label><input type="radio" name="ew_status" value="draft"> 草稿</label>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row">重复型号</th>
-                    <td>
-                        <label><input type="radio" name="ew_duplicate" value="skip" checked> 跳过（不替换，保持原商品不变）</label>
-                        &nbsp;
-                        <label><input type="radio" name="ew_duplicate" value="replace"> 替换（覆盖原商品的图片和内容）</label>
-                        <p class="description">按同 SKU 判断重复。选「替换」会复用原商品的 ID 和网址，<strong>前台链接不变</strong>，只是把图片、标题、状态和参数刷新成新素材；新素材没带的文字字段会保留原值。</p>
-                    </td>
-                </tr>
-                <?php if ( ! empty( $sync_lang_names ) ) : ?>
-                <tr>
-                    <th scope="row">多语言</th>
-                    <td>
-                        <label><input type="checkbox" name="ew_sync_langs" value="1" checked> 同时创建其它语言版本</label>
-                        <p class="description">会为每个商品自动创建：<?php echo esc_html( implode( ' / ', $sync_lang_names ) ); ?>。图片、参数、分类共用；标题和简介之后可在对应语言版本里单独修改。</p>
-                    </td>
-                </tr>
-                <?php endif; ?>
-                <tr>
-                    <th scope="row">首页推荐</th>
-                    <td><label><input type="checkbox" name="ew_hot" value="1"> 设为 Featured（首页 Featured Products 展示）</label></td>
-                </tr>
-                <tr>
-                    <th scope="row">试运行</th>
-                    <td><label><input type="checkbox" name="ew_dry" value="1"> 只统计不建商品（先看识别结果再正式导入）</label></td>
-                </tr>
-                <tr>
-                    <th scope="row">分类对照表</th>
-                    <td>
-                        <textarea name="ew_cat_map" rows="8" style="width:100%;max-width:520px;font-family:monospace" placeholder="# 每行一个型号，格式：型号 = 分类&#10;# 分类可写中文名，例如：&#10;#   DM9205A = 万用表&#10;#   VT811 = 测电笔&#10;#   XT802 = 钳形表"><?php echo esc_textarea( (string) get_option( 'ew_import_category_map', '' ) ); ?></textarea>
-                        <p class="description">型号 = 文件夹名（SKU）。这里配置的优先级最高，适合没有文字信息的纯数字型号（如 <code>605</code>、<code>646</code>）。保存后自动记住，下次导入沿用。<br>
-                        可写分类：<code>万用表</code> · <code>钳形表</code> · <code>测电笔</code> · <code>温度计</code> · <code>电池测试仪</code> · <code>插座测试仪</code>；不写 <code>=</code> 的行会被忽略。</p>
-                    </td>
-                </tr>
-            </table>
-            <p class="submit"><button type="submit" class="button button-primary button-hero" id="ew-import-btn"><span class="dashicons dashicons-upload"></span> 开始导入</button></p>
+            <div class="ew-layout">
+                <section class="ew-card ew-upload">
+                    <div class="ew-card-body">
+                        <div class="ew-card-heading"><div><h2>选择素材包</h2><p>每个 ZIP 中，一个型号对应一个文件夹。支持一次选择多个 ZIP。</p></div><span class="ew-chip">ZIP 格式</span></div>
+                        <label class="ew-dropzone" id="ew-dropzone" for="ew-import-files">
+                            <span class="ew-drop-icon" aria-hidden="true"><span class="dashicons dashicons-media-archive"></span></span>
+                            <strong>拖入 ZIP 文件，或点击选择</strong><small>支持批量选择 · 自动分片上传 · 中断后可续传</small><span class="ew-pick">浏览文件</span>
+                            <input class="ew-file-input" id="ew-import-files" type="file" name="ew_import_zip[]" accept=".zip" multiple required>
+                        </label>
+                        <div class="ew-selected" id="ew-selected-files"><p class="ew-selected-empty"><span class="dashicons dashicons-info-outline"></span> 尚未选择文件</p></div>
+                    </div>
+                    <div class="ew-actions"><p>上传后将自动解压并逐个导入型号。</p><button type="submit" id="ew-import-btn"><span class="dashicons dashicons-upload"></span> 开始导入</button></div>
+                </section>
+
+                <aside class="ew-card ew-settings">
+                    <div class="ew-card-body">
+                        <div class="ew-card-heading"><div><h2>导入设置</h2><p>按需调整，默认设置适合常规批量导入。</p></div></div>
+                        <div class="ew-field"><span class="ew-field-title">商品状态</span><div class="ew-choice-row"><label class="ew-choice"><input type="radio" name="ew_status" value="publish" checked> 立即发布</label><label class="ew-choice"><input type="radio" name="ew_status" value="draft"> 保存为草稿</label></div></div>
+                        <div class="ew-field"><span class="ew-field-title">重复型号</span><div class="ew-choice-row"><label class="ew-choice"><input type="radio" name="ew_duplicate" value="skip" checked> 跳过已有商品</label><label class="ew-choice"><input type="radio" name="ew_duplicate" value="replace"> 替换已有商品</label></div><p class="ew-help">替换会保留原商品 ID 与链接，并更新图片和内容。</p></div>
+                        <div class="ew-field"><span class="ew-field-title">分类方式</span><label class="ew-choice"><input type="checkbox" name="ew_cat_auto" value="1" checked> 自动识别分类</label><p class="ew-help">根据文件夹名、info.json 和分类文件识别。</p></div>
+                        <div class="ew-field"><label class="ew-field-title" for="ew-cat-id">未识别时归入</label><select id="ew-cat-id" name="ew_cat_id"><option value="0" <?php selected( $default_cat_id, 0 ); ?>>不分类</option><?php foreach ( $cats as $c ) : ?><option value="<?php echo (int) $c->term_id; ?>" <?php selected( $default_cat_id, (int) $c->term_id ); ?>><?php echo esc_html( $c->name ); ?></option><?php endforeach; ?></select></div>
+                    </div>
+                </aside>
+            </div>
+            <details class="ew-extra"><summary>更多导入选项 <span class="ew-help">多语言、试运行与分类对照表</span></summary><div class="ew-extra-body">
+                <?php if ( ! empty( $sync_lang_names ) ) : ?><div class="ew-field"><span class="ew-field-title">多语言</span><label class="ew-choice"><input type="checkbox" name="ew_sync_langs" value="1" checked> 同时创建其它语言版本</label><p class="ew-help"><?php echo esc_html( implode( ' / ', $sync_lang_names ) ); ?>。图片、参数和分类共用。</p></div><?php endif; ?>
+                <div class="ew-field"><span class="ew-field-title">首页推荐</span><label class="ew-choice"><input type="checkbox" name="ew_hot" value="1"> 设为 Featured 商品</label></div>
+                <div class="ew-field"><span class="ew-field-title">试运行</span><label class="ew-choice"><input type="checkbox" name="ew_dry" value="1"> 只统计，不创建商品</label><p class="ew-help">建议首次导入新素材时先检查识别结果。</p></div>
+                <div class="ew-field"><label class="ew-field-title" for="ew-cat-map">分类对照表</label><textarea id="ew-cat-map" name="ew_cat_map" rows="7" placeholder="# 每行一个型号：型号 = 分类&#10;DM9205A = 万用表&#10;VT811 = 测电笔"><?php echo esc_textarea( (string) get_option( 'ew_import_category_map', '' ) ); ?></textarea><p class="ew-help">适合纯数字型号或无法自动识别的分类。保存后下次导入继续使用。</p></div>
+            </div></details>
         </form>
 
-        <div id="ew-progress" style="display:none;max-width:680px">
-            <div style="height:22px;background:#e5e7eb;border-radius:6px;overflow:hidden"><div id="ew-progress-fill" style="height:100%;width:0%;background:#2271ae;transition:width .25s ease"></div></div>
-            <p id="ew-progress-text" style="margin-top:8px;color:#505759"></p>
-        </div>
+        <section id="ew-progress" style="display:none" role="status" aria-live="polite"><p class="ew-progress-label">导入进度</p><div id="ew-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="ew-progress-fill"></div></div><p id="ew-progress-text"></p></section>
+        <div id="ew-import-resume-wrap" style="display:none"><button type="button" class="button button-primary" id="ew-import-resume">继续导入</button><span class="description">从已上传的分片或已完成的型号继续。</span></div>
+        <div id="ew-live-results"></div>
 
-        <p id="ew-import-resume-wrap" style="display:none;max-width:680px">
-            <button type="button" class="button button-primary" id="ew-import-resume">继续导入</button>
-            <span class="description">从已上传的分片或已完成的型号继续。</span>
-        </p>
-
-        <div id="ew-live-results" style="max-width:960px"></div>
-
-        <div id="ew-import-json-example" style="max-width:960px;margin-top:32px">
-            <h2>info.json 示例（复制到型号文件夹里，改数值即可）</h2>
-            <p class="description">文件名用 <code>info.json</code>，保存为 UTF-8。没有它的型号，五个选项卡会保持为空（只有型号 / SKU / 分类能显示）。</p>
-            <textarea readonly rows="14" style="width:100%;max-width:680px;font-family:monospace;font-size:12px;background:#f6f7f7">{
+        <section class="ew-guide"><h2>素材准备指南</h2><p>导入前核对命名规则；详细说明默认收起，不影响主要操作。</p>
+            <details class="ew-extra"><summary>文件夹与图片如何命名</summary><div class="ew-extra-body"><table class="ew-guide-table"><thead><tr><th>文件或文件夹</th><th>导入位置</th></tr></thead><tbody>
+                <tr><td>型号文件夹（如 <code>XT266C</code>）</td><td>商品名称与 SKU</td></tr><tr><td><code>白底图</code> / <code>底图</code> / <code>主图</code></td><td>商品主图、详情第 1 张</td></tr><tr><td><code>详细参数图</code> / <code>详情图</code></td><td>商品详情第 2 张；文件名可加“英文”或“中文”区分语言</td></tr><tr><td><code>使用场景图</code> / <code>场景图N</code></td><td>商品详情第 3 张，同时进入画廊</td></tr><tr><td><code>展示图N</code> / <code>轮播图N</code></td><td>画廊图，按编号排序</td></tr><tr><td><code>info.json</code> 或 <code>参数c.json</code></td><td>规格、特性与包装文字</td></tr>
+            </tbody></table><p class="ew-help">ZIP 内可包含嵌套 ZIP；含“暂不处理”的文件夹会跳过。重复 SKU 默认跳过。</p></div></details>
+            <details class="ew-extra" id="ew-import-json-example"><summary>info.json 示例与字段说明</summary><div class="ew-extra-body"><p class="ew-help">把 UTF-8 格式的 <code>info.json</code> 放进型号文件夹。<code>details</code> 中的 Description 是规格与特性的分界，<code>packaging</code> 用于包装信息。</p><textarea class="ew-json-example" readonly rows="12">{
   "name": "DT6221 digital meter",
-  "details": "DCV: 400mV~600V ±1.8%\nACV: 4V~600V ±2.0%\nDCA: 400uA,4000uA,40MA,200MA ±1.4%\nResistance: 400Ω~40MΩ ±1.2%\nFrequency: 10Hz~4MHz ±0.7%\nCapacitance: 4nF~4mF ±3.5%\nDescription\nLCD size: 48x29mm\nMax display: 4000\nLow battery indication: yes\nDiode test: yes\nContinuity buzzer test: yes\nOverload protection: yes\nPower supply: two 1.5V AAA battery\nProduct size: 148×71×33mm\nProduct weight: about 155g\nStandard accessories: meter (with battery), manual",
-  "packaging": "Packing: color box\nPacking quantity: 60PCS/CTN\nCarton size: 51.5 X 35.5 X 31.5CM\nG.W. / N.W.: 17.06/16.38KG"
-}</textarea>
-            <p class="description">
-                <code>Description</code> 这一行是分界：<strong>上面</strong>的「字段: 数值」进 Specification 表格，<strong>下面</strong>的进 Overview 的 Key Features；
-                只有测电笔这类没有参数表的型号，才用 <code>product_information</code>（整段文字，会自动去掉 <code>1. 2.</code> 序号当特性显示）。
-            </p>
-        </div>
+  "details": "DCV: 400mV~600V ±1.8%\nACV: 4V~600V ±2.0%\nDescription\nLCD size: 48x29mm\nLow battery indication: yes",
+  "packaging": "Packing: color box\nPacking quantity: 60PCS/CTN"
+}</textarea></div></details>
+        </section>
 
         <script>
         (function () {
@@ -1494,13 +1526,31 @@ function ew_render_product_import() {
             var btn = document.getElementById('ew-import-btn');
             var resumeBtn = document.getElementById('ew-import-resume');
             var resumeWrap = document.getElementById('ew-import-resume-wrap');
+            var dropzone = document.getElementById('ew-dropzone');
+            var selectedFiles = document.getElementById('ew-selected-files');
             var bar = document.getElementById('ew-progress');
             var fill = document.getElementById('ew-progress-fill');
             var txt = document.getElementById('ew-progress-text');
             var out = document.getElementById('ew-live-results');
             var jobId = '', nonce = '', allResults = [], completedResults = [], dry = false;
             var files = [], fileIndex = 0, currentUpload = '', uploading = false;
+            var batchKey = 'ew-product-import-batch', batch = null;
             var chunkSize = 1024 * 1024, concurrency = 3;
+
+            function fileKey(file) { return file.name + ':' + file.size + ':' + file.lastModified; }
+            function saveBatch() {
+                if (!batch) { return; }
+                try { localStorage.setItem(batchKey, JSON.stringify(batch)); } catch (e) {}
+            }
+            function clearBatch() {
+                batch = null;
+                try { localStorage.removeItem(batchKey); } catch (e) {}
+            }
+            function setPercent(value) {
+                var pct = Math.max(0, Math.min(100, Math.round(value)));
+                fill.style.width = pct + '%';
+                document.getElementById('ew-progress-track').setAttribute('aria-valuenow', String(pct));
+            }
 
             function esc(s) {
                 return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -1508,6 +1558,42 @@ function ew_render_product_import() {
                 });
             }
             function mb(b) { return (b / 1048576).toFixed(1) + ' MB'; }
+
+            function renderSelectedFiles() {
+                var chosen = Array.prototype.slice.call(fileInput.files || []);
+                if (!chosen.length) {
+                    selectedFiles.innerHTML = '<p class="ew-selected-empty"><span class="dashicons dashicons-info-outline"></span> 尚未选择文件</p>';
+                    return;
+                }
+                selectedFiles.innerHTML = chosen.map(function (file) {
+                    return '<div class="ew-file-row"><span class="dashicons dashicons-media-archive" aria-hidden="true"></span><span title="' + esc(file.name) + '">' + esc(file.name) + '</span><small>' + mb(file.size) + '</small></div>';
+                }).join('');
+            }
+            fileInput.addEventListener('change', renderSelectedFiles);
+            if (dropzone) {
+                ['dragenter', 'dragover'].forEach(function (name) {
+                    dropzone.addEventListener(name, function (event) { event.preventDefault(); dropzone.classList.add('is-dragging'); });
+                });
+                ['dragleave', 'drop'].forEach(function (name) {
+                    dropzone.addEventListener(name, function (event) { event.preventDefault(); dropzone.classList.remove('is-dragging'); });
+                });
+                dropzone.addEventListener('drop', function (event) {
+                    var dropped = Array.prototype.slice.call(event.dataTransfer && event.dataTransfer.files || []);
+                    if (!dropped.length) { return; }
+                    if (dropped.some(function (file) { return !/\.zip$/i.test(file.name); })) {
+                        showError('这里只能选择 ZIP 文件。', false);
+                        return;
+                    }
+                    try {
+                        var transfer = new DataTransfer();
+                        dropped.forEach(function (file) { transfer.items.add(file); });
+                        fileInput.files = transfer.files;
+                        renderSelectedFiles();
+                    } catch (error) {
+                        showError('当前浏览器不支持拖入文件，请点击「浏览文件」选择 ZIP。', false);
+                    }
+                });
+            }
 
             function countResults() {
                 var ok = 0, skip = 0, fail = 0;
@@ -1558,10 +1644,10 @@ function ew_render_product_import() {
             function setProgress(done, total, label) {
                 if (total > 0) {
                     var pct = Math.min(100, Math.round(done * 100 / total));
-                    fill.style.width = pct + '%';
+                    setPercent(pct);
                     txt.textContent = '服务器处理中：' + done + ' / ' + total + ' 个型号' + (label ? '（' + label + '）' : '');
                 } else {
-                    fill.style.width = '5%';
+                    setPercent(5);
                     txt.textContent = label || '服务器正在解压 ZIP…';
                 }
             }
@@ -1589,6 +1675,7 @@ function ew_render_product_import() {
                 var xhr = new XMLHttpRequest();
                 xhr.open('POST', form.getAttribute('action'), true);
                 xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                xhr.timeout = 120000;
                 xhr.onload = function () {
                     var data = parseJson(xhr);
                     if (!data) {
@@ -1596,25 +1683,45 @@ function ew_render_product_import() {
                         return;
                     }
                     if (data.error) {
-                        showError(data.error, false);
+                        if (data.expired && batch) {
+                            if (batch.entries[batch.index]) { localStorage.removeItem('ew-product-upload:' + batch.entries[batch.index]); }
+                            batch.job = '';
+                            batch.upload = '';
+                            jobId = '';
+                            saveBatch();
+                            showError(data.error + ' 请重新选择原 ZIP 文件。', false);
+                        } else { showError(data.error, true); }
                         return;
                     }
                     if (data.busy) { setTimeout(processNext, 1500); return; }
                     allResults = completedResults.concat(data.results || []);
                     dry = !!data.dry;
+                    if (batch) { batch.done = data.done_models; batch.total = data.total_models; batch.dry = dry; saveBatch(); }
                     setProgress(data.done_models, data.total_models, data.current);
                     paint(!!data.done);
                     if (data.done) {
-                        fill.style.width = '100%';
+                        setPercent(100);
                         txt.textContent = '处理完成，共 ' + allResults.length + ' 个型号。';
                         completedResults = allResults;
-                        if (files[fileIndex]) { localStorage.removeItem(uploadKey(files[fileIndex])); }
+                        if (batch) {
+                            var entry = batch.entries[batch.index];
+                            if (entry) { localStorage.removeItem('ew-product-upload:' + entry); }
+                            batch.index++;
+                            batch.job = '';
+                            batch.upload = '';
+                            batch.results = completedResults;
+                            saveBatch();
+                        }
                         fileIndex++;
                         jobId = '';
                         currentUpload = '';
                         if (fileIndex < files.length) { startFile(); return; }
                         btn.disabled = false;
                         if (resumeBtn) { resumeBtn.disabled = false; }
+                        if (batch && batch.index < batch.entries.length) {
+                            txt.textContent = '已完成 ' + batch.index + '/' + batch.entries.length + ' 个 ZIP。请重新选择剩余 ZIP 文件继续。';
+                            resumeWrap.style.display = 'block';
+                        } else { clearBatch(); }
                         return;
                     }
                     processNext();
@@ -1622,11 +1729,12 @@ function ew_render_product_import() {
                 xhr.onerror = function () {
                     showError('服务器连接中断。已处理 ' + allResults.length + ' 个型号，可点击「继续导入」从断点继续。', true);
                 };
+                xhr.ontimeout = function () { showError('服务器处理超时，任务仍保留。点击「继续导入」读取最新进度。', true); };
                 xhr.send(fd);
             }
 
             function uploadKey(file) {
-                return 'ew-product-upload:' + file.name + ':' + file.size + ':' + file.lastModified;
+                return 'ew-product-upload:' + fileKey(file);
             }
             function request(data, blob, progress) {
                 return new Promise(function (resolve, reject) {
@@ -1638,7 +1746,7 @@ function ew_render_product_import() {
                     var xhr = new XMLHttpRequest();
                     xhr.open('POST', form.getAttribute('action'), true);
                     xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-                    xhr.timeout = 60000;
+                    xhr.timeout = data.op === 'finish' ? 180000 : 60000;
                     if (progress) { xhr.upload.onprogress = progress; }
                     xhr.onload = function () {
                         var result = parseJson(xhr);
@@ -1675,6 +1783,7 @@ function ew_render_product_import() {
                 }) : request({ op: 'start', name: file.name, size: file.size, parts: parts });
                 return session.then(function (data) {
                     currentUpload = data.upload;
+                    if (batch) { batch.upload = currentUpload; saveBatch(); }
                     if (data.job) { return data; }
                     localStorage.setItem(key, JSON.stringify({ upload: currentUpload }));
                     var received = {}, completed = 0, pending = [], activeBytes = {};
@@ -1683,7 +1792,7 @@ function ew_render_product_import() {
                     function paintUpload() {
                         var inFlight = Object.keys(activeBytes).reduce(function (n, k) { return n + activeBytes[k]; }, 0);
                         var loaded = Math.min(file.size, completed + inFlight);
-                        fill.style.width = Math.round(loaded * 100 / file.size) + '%';
+                        setPercent(loaded * 100 / file.size);
                         txt.textContent = '上传 ' + (fileIndex + 1) + '/' + files.length + '：' + file.name + ' · ' + mb(loaded) + ' / ' + mb(file.size) + '（3 路并发）';
                     }
                     paintUpload();
@@ -1721,6 +1830,7 @@ function ew_render_product_import() {
                 try { saved = JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) {}
                 if (saved && saved.job) {
                     jobId = saved.job;
+                    if (batch) { batch.job = jobId; batch.upload = saved.upload || ''; saveBatch(); }
                     txt.textContent = '继续处理 ' + file.name + '…';
                     processNext();
                     return;
@@ -1731,7 +1841,8 @@ function ew_render_product_import() {
                     jobId = data.job;
                     dry = !!data.dry;
                     localStorage.setItem(key, JSON.stringify({ upload: currentUpload, job: jobId }));
-                    fill.style.width = '5%';
+                    if (batch) { batch.job = jobId; batch.upload = currentUpload; batch.dry = dry; saveBatch(); }
+                    setPercent(5);
                     processNext();
                 }).catch(function (error) {
                     uploading = false;
@@ -1741,18 +1852,36 @@ function ew_render_product_import() {
             form.addEventListener('submit', function (e) {
                 if (!fileInput.files || !fileInput.files.length) { return; }
                 e.preventDefault();
-                files = Array.prototype.slice.call(fileInput.files);
-                fileIndex = 0;
+                var selected = Array.prototype.slice.call(fileInput.files);
+                var keys = selected.map(fileKey), continuing = batch && !batch.job && batch.index < batch.entries.length;
+                if (continuing) {
+                    var remaining = batch.entries.slice(batch.index);
+                    var fullMatch = keys.join('|') === batch.entries.join('|');
+                    var remainingMatch = keys.join('|') === remaining.join('|');
+                    if (!fullMatch && !remainingMatch) {
+                        showError('当前有未完成的批次。请重新选择原来的全部 ZIP，或只选择尚未处理的 ZIP（顺序保持一致）。', false);
+                        return;
+                    }
+                    files = selected;
+                    fileIndex = fullMatch ? batch.index : 0;
+                    if (remainingMatch) { batch.entries = remaining; batch.index = 0; }
+                    completedResults = batch.results || [];
+                } else {
+                    files = selected;
+                    fileIndex = 0;
+                    completedResults = [];
+                    batch = { entries: keys, index: 0, upload: '', job: '', results: [], done: 0, total: 0, dry: false };
+                }
+                saveBatch();
                 jobId = '';
-                allResults = [];
-                completedResults = [];
+                allResults = completedResults.slice();
                 dry = false;
                 nonce = form.querySelector('[name="ew_import_nonce"]').value;
                 resumeWrap.style.display = 'none';
                 btn.disabled = true;
                 out.innerHTML = '';
                 bar.style.display = 'block';
-                fill.style.width = '0%';
+                setPercent(0);
                 startFile();
             });
             if (resumeBtn) {
@@ -1760,8 +1889,29 @@ function ew_render_product_import() {
                     resumeWrap.style.display = 'none';
                     if (jobId) { processNext(); }
                     else if (files.length) { startFile(); }
-                    else { showError('请重新选择原来的 ZIP 文件，然后点击「开始导入」。', false); }
+                    else { showError('请重新选择未完成的 ZIP 文件，然后点击「开始导入」。', false); }
                 });
+            }
+            try { batch = JSON.parse(localStorage.getItem(batchKey) || 'null'); } catch (e) { batch = null; }
+            if (batch && Array.isArray(batch.entries) && batch.index < batch.entries.length) {
+                nonce = form.querySelector('[name="ew_import_nonce"]').value;
+                completedResults = Array.isArray(batch.results) ? batch.results : [];
+                allResults = completedResults.slice();
+                dry = !!batch.dry;
+                bar.style.display = 'block';
+                if (batch.job) {
+                    jobId = batch.job;
+                    currentUpload = batch.upload || '';
+                    btn.disabled = true;
+                    txt.textContent = '正在恢复服务器导入任务…';
+                    setProgress(batch.done || 0, batch.total || 0, '恢复中');
+                    processNext();
+                } else {
+                    var pending = batch.entries[batch.index].split(':').slice(0, -2).join(':');
+                    txt.textContent = '上传已暂停：请重新选择 ' + pending + ' 及剩余 ZIP，然后点击「开始导入」。已上传分片会自动续传。';
+                    resumeWrap.style.display = 'block';
+                    out.innerHTML = tableHtml();
+                }
             }
         })();
         </script>
