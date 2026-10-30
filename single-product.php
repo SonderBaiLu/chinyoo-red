@@ -345,6 +345,26 @@ while ( have_posts() ) :
      * 6. Display values.
      * -------------------------------------------------------------------- */
     $series_title      = (string) $product->get_name();
+    $information_series = $series_title;
+    if ( ! $product->is_type( 'variable' ) ) {
+        // A simple product is a model, not a series. Show its most specific
+        // assigned product category instead of repeating the model and SKU.
+        $information_series = '';
+        $series_terms = get_the_terms( $product->get_id(), 'product_cat' );
+        if ( is_array( $series_terms ) && ! is_wp_error( $series_terms ) ) {
+            $deepest_depth = -1;
+            foreach ( $series_terms as $series_term ) {
+                if ( 'uncategorized' === $series_term->slug ) {
+                    continue;
+                }
+                $depth = count( get_ancestors( $series_term->term_id, 'product_cat', 'taxonomy' ) );
+                if ( $depth > $deepest_depth ) {
+                    $deepest_depth = $depth;
+                    $information_series = $series_term->name;
+                }
+            }
+        }
+    }
     $short_description = (string) $product->get_short_description();
     $packaging         = isset( $current_model['packaging'] ) ? (string) $current_model['packaging'] : '';
     $current_sku       = '' !== $current_model['sku'] ? $current_model['sku'] : $current_model['label'];
@@ -602,7 +622,7 @@ while ( have_posts() ) :
             <div class="product-tab__panel" id="tab-Information" role="tabpanel" aria-labelledby="Information">
                 <h2 class="tab-panel-title"><?php ew_esc_html_e('Product Information'); ?></h2>
                 <dl class="product-information">
-                    <div><dt><?php ew_esc_html_e('Series'); ?></dt><dd><?php echo esc_html( $series_title ); ?></dd></div>
+                    <?php if ( '' !== $information_series ) : ?><div><dt><?php ew_esc_html_e('Series'); ?></dt><dd><?php echo esc_html( $information_series ); ?></dd></div><?php endif; ?>
                     <div><dt><?php ew_esc_html_e('Model'); ?></dt><dd><?php echo esc_html( $current_model['label'] ); ?></dd></div>
                     <div><dt><?php ew_esc_html_e('SKU'); ?></dt><dd><?php echo esc_html( $current_sku ); ?></dd></div>
                     <?php foreach ( $highlights as $highlight ) : ?><div><dt><?php echo esc_html( $highlight['name'] ); ?></dt><dd><?php echo esc_html( $highlight['value'] ); ?></dd></div><?php endforeach; ?>
