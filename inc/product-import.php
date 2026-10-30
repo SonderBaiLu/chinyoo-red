@@ -319,6 +319,57 @@ function ew_import_read_product_text( $dir ) {
     );
 }
 
+/* 单品身份：优先使用已核对的本地映射；新型号从文件夹名提取型号。
+ * info.json 可显式写 model_number / sku / category，覆盖映射默认值。 */
+function ew_import_product_identity( $dir, $folder_name ) {
+    static $map = null;
+    if ( null === $map ) {
+        $file = get_stylesheet_directory() . '/data/product-identities.json';
+        $raw = is_readable( $file ) ? file_get_contents( $file ) : '';
+        $decoded = $raw ? json_decode( $raw, true ) : array();
+        $map = is_array( $decoded ) ? $decoded : array();
+    }
+
+    $key = mb_strtolower( trim( (string) $folder_name ) );
+    $saved = isset( $map[ $key ] ) && is_array( $map[ $key ] ) ? $map[ $key ] : array();
+    $sku = isset( $saved['sku'] ) ? trim( (string) $saved['sku'] ) : $folder_name;
+    $model = isset( $saved['model'] ) ? trim( (string) $saved['model'] ) : '';
+    $category = isset( $saved['category'] ) ? trim( (string) $saved['category'] ) : '';
+
+    if ( '' === $model ) {
+        $model = preg_replace( '/^\d+_/', '', $folder_name );
+        $model = preg_replace( '/\s+(?:digital|voltage|temperature|pen-type|hand-held|multi-function|multifunction)\b.*$/iu', '', $model );
+        $model = preg_replace( '/\s+-\s+red$/iu', '', $model );
+        $model = trim( $model );
+        if ( preg_match( '/^[a-z][a-z0-9+\-]*$/i', $model ) && preg_match( '/\d/', $model ) ) {
+            $model = strtoupper( $model );
+        }
+    }
+
+    $info_file = $dir . '/info.json';
+    if ( is_readable( $info_file ) ) {
+        $raw = preg_replace( '/^\xEF\xBB\xBF/', '', (string) file_get_contents( $info_file ) );
+        $info = json_decode( $raw, true );
+        if ( is_array( $info ) ) {
+            if ( ! empty( $info['model_number'] ) && is_scalar( $info['model_number'] ) ) {
+                $model = sanitize_text_field( (string) $info['model_number'] );
+            }
+            if ( ! empty( $info['sku'] ) && is_scalar( $info['sku'] ) ) {
+                $sku = sanitize_text_field( (string) $info['sku'] );
+            }
+            if ( ! empty( $info['category'] ) && is_scalar( $info['category'] ) ) {
+                $category = sanitize_text_field( (string) $info['category'] );
+            }
+        }
+    }
+
+    return array(
+        'sku' => '' !== $sku ? $sku : $folder_name,
+        'model' => '' !== $model ? $model : $folder_name,
+        'category' => $category,
+    );
+}
+
 /* 强制指定：文件夹里放 分类.txt（一行分类名 / 中文名 / slug）时优先采用 */
 function ew_import_read_category_file( $dir ) {
     foreach ( array( '分类.txt', '分类.md' ) as $name ) {
@@ -707,8 +758,18 @@ function ew_import_one_folder( $dir, $folder_name, $options ) {
     foreach ( $scene as $group ) { $scene_total += count( $group ); }
     $summary = sprintf( '主图 %d · 画廊 %d · 详情 en %d / cn %d · 场景 %d', count( $main ), $gallery_total, count( $detail_en ), count( $detail_cn ), $scene_total );
 
-    // 分类：对照表 → 分类.txt → 文件夹名 → info.json/生成记录
-    $cat_slug  = ! empty( $options['cat_auto'] ) ? ew_import_detect_category( $dir, $folder_name ) : '';
+    // 身份以本地核对表为基础；分类.txt 始终可以显式覆盖。
+    $identity = ew_import_product_identity( $dir, $folder_name );
+    $cat_slug = '';
+    if ( ! empty( $options['cat_auto'] ) ) {
+        $cat_slug = ew_import_read_category_file( $dir );
+        if ( '' === $cat_slug && '' !== $identity['category'] ) {
+            $cat_slug = ew_import_resolve_category( $identity['category'] );
+        }
+        if ( '' === $cat_slug ) {
+            $cat_slug = ew_import_detect_category( $dir, $folder_name );
+        }
+    }
     $cat_label = ew_import_category_label( $cat_slug );
 
     // 试运行：只统计不落库
@@ -725,7 +786,7 @@ function ew_import_one_folder( $dir, $folder_name, $options ) {
     $found = get_posts( array(
         'post_type'        => 'product',
         'meta_key'         => '_sku',
-        'meta_value'       => $folder_name,
+        'meta_value'       => $identity['sku'],
         'post_status'      => array( 'publish', 'draft' ),
         'numberposts'      => 1,
         'fields'           => 'ids',
@@ -763,8 +824,8 @@ function ew_import_one_folder( $dir, $folder_name, $options ) {
     }
     update_post_meta( $prod_id, '_product_type', 'simple' );
     update_post_meta( $prod_id, '_stock_status', 'instock' );
-    update_post_meta( $prod_id, '_sku', $folder_name );
-    update_post_meta( $prod_id, 'product_model', $folder_name );
+    update_post_meta( $prod_id, '_sku', $identity['sku'] );
+    update_post_meta( $prod_id, 'product_model', $identity['model'] );
 
     // 五个选项卡的文本：从 info.json / 参数c.json 解析
     $text_data = ew_import_read_product_text( $dir );
@@ -1509,10 +1570,13 @@ function ew_render_product_import() {
 
         <section class="ew-guide"><h2>素材准备指南</h2><p>导入前核对命名规则；详细说明默认收起，不影响主要操作。</p>
             <details class="ew-extra"><summary>文件夹与图片如何命名</summary><div class="ew-extra-body"><table class="ew-guide-table"><thead><tr><th>文件或文件夹</th><th>导入位置</th></tr></thead><tbody>
-                <tr><td>型号文件夹（如 <code>XT266C</code>）</td><td>商品名称与 SKU</td></tr><tr><td><code>白底图</code> / <code>底图</code> / <code>主图</code></td><td>商品主图、详情第 1 张</td></tr><tr><td><code>详细参数图</code> / <code>详情图</code></td><td>商品详情第 2 张；文件名可加“英文”或“中文”区分语言</td></tr><tr><td><code>使用场景图</code> / <code>场景图N</code></td><td>商品详情第 3 张，同时进入画廊</td></tr><tr><td><code>展示图N</code> / <code>轮播图N</code></td><td>画廊图，按编号排序</td></tr><tr><td><code>info.json</code> 或 <code>参数c.json</code></td><td>规格、特性与包装文字</td></tr>
+                <tr><td>型号文件夹（如 <code>XT266C</code>）</td><td>商品名称与 SKU</td></tr><tr><td><code>白底图</code> / <code>底图</code> / <code>主图</code></td><td>商品主图、详情第 1 张</td></tr><tr><td><code>详细参数图</code> / <code>详情图</code></td><td>商品详情第 2 张；文件名可加“英文”或“中文”区分语言</td></tr><tr><td><code>使用场景图</code> / <code>场景图N</code></td><td>商品详情第 3 张，同时进入画廊</td></tr><tr><td><code>展示图N</code> / <code>轮播图N</code></td><td>画廊图，按编号排序</td></tr><tr><td><code>info.json</code> 或 <code>参数c.json</code></td><td>规格、特性与包装文字；<code>info.json</code> 可填 <code>model_number</code>、<code>sku</code>、<code>category</code> 覆盖自动识别</td></tr>
             </tbody></table><p class="ew-help">ZIP 内可包含嵌套 ZIP；含“暂不处理”的文件夹会跳过。重复 SKU 默认跳过。</p></div></details>
             <details class="ew-extra" id="ew-import-json-example"><summary>info.json 示例与字段说明</summary><div class="ew-extra-body"><p class="ew-help">把 UTF-8 格式的 <code>info.json</code> 放进型号文件夹。<code>details</code> 中的 Description 是规格与特性的分界，<code>packaging</code> 用于包装信息。</p><textarea class="ew-json-example" readonly rows="12">{
   "name": "DT6221 digital meter",
+  "model_number": "DT6221",
+  "sku": "DT6221",
+  "category": "digital-multimeters",
   "details": "DCV: 400mV~600V ±1.8%\nACV: 4V~600V ±2.0%\nDescription\nLCD size: 48x29mm\nLow battery indication: yes",
   "packaging": "Packing: color box\nPacking quantity: 60PCS/CTN"
 }</textarea></div></details>

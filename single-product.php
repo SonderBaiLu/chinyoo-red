@@ -155,6 +155,24 @@ function ew_get_model_detail_extras( $model_id ) {
 }
 }
 
+/** Use the source product SKU on translated pages that have no duplicate WooCommerce SKU. */
+if ( ! function_exists( 'ew_product_display_sku' ) ) {
+function ew_product_display_sku( $product ) {
+    $sku = (string) $product->get_sku();
+    if ( '' !== $sku || ! function_exists( 'pll_get_post' ) || ! function_exists( 'pll_default_language' ) ) {
+        return $sku;
+    }
+    $source_id = (int) pll_get_post( $product->get_id(), pll_default_language() );
+    if ( $source_id && $source_id !== $product->get_id() ) {
+        $source = wc_get_product( $source_id );
+        if ( $source instanceof WC_Product ) {
+            return (string) $source->get_sku();
+        }
+    }
+    return $sku;
+}
+}
+
 get_header();
 
 while ( have_posts() ) :
@@ -229,7 +247,7 @@ while ( have_posts() ) :
         }
     } else {
         $pid        = $product->get_id();
-        $sku        = $product->get_sku() ? (string) $product->get_sku() : '';
+        $sku        = ew_product_display_sku( $product );
         $url_model  = '' !== $sku ? $sku : $product->get_slug();
         $model_meta = (string) get_post_meta( $pid, 'product_model', true );
         $label      = '' !== $model_meta ? $model_meta : ( '' !== $sku ? $sku : $url_model );
@@ -248,7 +266,7 @@ while ( have_posts() ) :
     // Defensive: if no model could be derived, fall back to the parent product.
     if ( empty( $models ) ) {
         $pid        = $product->get_id();
-        $sku        = $product->get_sku() ? (string) $product->get_sku() : '';
+        $sku        = ew_product_display_sku( $product );
         $url_model  = '' !== $sku ? $sku : $product->get_slug();
         $model_meta = (string) get_post_meta( $pid, 'product_model', true );
         $label      = '' !== $model_meta ? $model_meta : ( '' !== $sku ? $sku : $product->get_name() );
