@@ -120,7 +120,7 @@ $ew_quotes = array(
 		</ul>
 	</div>
 	<div class="hero-media" aria-hidden="true">
-		<img src="<?php echo esc_url( EW_THEME_URI . '/assets/images/slide-5.jpg' ); ?>" alt="" width="4206" height="1280" fetchpriority="high">
+		<img src="<?php echo esc_url( EW_THEME_URI . '/assets/images/hero-home-dt9205a-v2.webp' ); ?>" alt="" width="1448" height="1086" fetchpriority="high">
 	</div>
 </div>
 
