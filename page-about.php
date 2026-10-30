@@ -143,6 +143,7 @@ get_header();
 		<?php get_template_part( 'template-parts/inquiry-form', null, array( 'product_name' => '' ) ); ?>
 	</div>
 </section>
+<?php ew_buyer_faq_block(); ?>
 </main>
 <?php
 get_footer();

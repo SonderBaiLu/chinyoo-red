@@ -109,6 +109,15 @@
                 })
                 .then(function (res) { return res.json(); })
                 .then(function (data) {
+                    // Google Ads / GA4 conversion: only after the server returns success
+                    // (honeypot + nonce + turnstile already passed), so junk or failed
+                    // submissions are never counted as leads.
+                    if (data.success && typeof gtag === 'function') {
+                        gtag('event', 'generate_lead', {
+                            form_id: 'ew-inquiry-form',
+                            page_path: window.location.pathname
+                        });
+                    }
                     if (feedback) {
                         feedback.style.display = 'block';
                         if (data.success) {

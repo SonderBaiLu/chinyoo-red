@@ -106,9 +106,9 @@ $ew_quotes = array(
 <div class="hero">
 	<div class="hero-copy">
 		<p class="hero-overline" data-css-animate-type="slidedown" data-css-animate="1">CHINYOO INSTRUMENTS <span>·</span> OEM/ODM FACTORY</p>
-		<h1 data-css-animate-type="slidedown" data-css-animate="2"><?php ew_esc_html_e('What do you need to measure today?'); ?></h1>
-		<p class="hero-lede" data-css-animate-type="slidedown" data-css-animate="3"><?php ew_esc_html_e('If it can be measured, CHINYOO has the right instrument for the job.'); ?></p>
-		<p class="hero-note" data-css-animate-type="slidedown" data-css-animate="4"><?php ew_esc_html_e('Explore our factory-direct electrical test tools and see how easily they fit into your workflow — and your budget.'); ?></p>
+		<h1 data-css-animate-type="slidedown" data-css-animate="2"><?php ew_esc_html_e('Digital Multimeters, Voltage Testers and Clamp Meters, Factory-Direct'); ?></h1>
+		<p class="hero-lede" data-css-animate-type="slidedown" data-css-animate="3"><?php ew_esc_html_e('What do you need to measure today? Tell us the application and we will match the model.'); ?></p>
+		<p class="hero-note" data-css-animate-type="slidedown" data-css-animate="4"><?php ew_esc_html_e('Multimeters, test pens, clamp meters and battery testers — made in our own factory since 2008.'); ?></p>
 		<div class="btns" data-css-animate-type="slidedown" data-css-animate="5">
 			<a class="btn-accent" href="#industries"><?php ew_esc_html_e("What's your application? Explore the options."); ?></a>
 			<a class="btn-ghost" href="<?php echo esc_url( $ew_browse_url ); ?>"><?php ew_esc_html_e('Browse Products'); ?></a>

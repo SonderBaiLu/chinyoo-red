@@ -36,9 +36,9 @@ get_header();
 		<div class="quote-block">
 			<h4><?php ew_esc_html_e('Contact'); ?></h4>
 			<ul class="quote-list">
-				<li><strong>Chingy</strong> · WhatsApp <a href="https://wa.me/8617816800511" target="_blank" rel="noopener">+86 178 1680 0511</a><br><a href="mailto:chinyoo08@gmail.com">chinyoo08@gmail.com</a></li>
-				<li><strong>Jack</strong> · WhatsApp <a href="https://wa.me/8617706872345" target="_blank" rel="noopener">+86 177 0687 2345</a><br><a href="mailto:sugon163zy@gmail.com">sugon163zy@gmail.com</a></li>
-				<li><strong>Anna</strong> · WhatsApp <a href="https://wa.me/8617706873456" target="_blank" rel="noopener">+86 177 0687 3456</a><br><a href="mailto:zhengyuan2101@gmail.com">zhengyuan2101@gmail.com</a></li>
+				<li><strong>Chingy</strong> · WhatsApp <a href="https://wa.me/8617816800511" target="_blank" rel="noopener">+86 178 1680 0511</a><br><a href="mailto:chingycai@chinyoo.com">chingycai@chinyoo.com</a></li>
+				<li><strong>Jack</strong> · WhatsApp <a href="https://wa.me/8617706872345" target="_blank" rel="noopener">+86 177 0687 2345</a><br><a href="mailto:jack@chinyoo.com">jack@chinyoo.com</a></li>
+				<li><strong>Anna</strong> · WhatsApp <a href="https://wa.me/8617706873456" target="_blank" rel="noopener">+86 177 0687 3456</a><br><a href="mailto:anna@chinyoo.com">anna@chinyoo.com</a></li>
 			</ul>
 		</div>
 
@@ -54,5 +54,6 @@ get_header();
 		<?php get_template_part( 'template-parts/inquiry-form', null, array( 'product_name' => '' ) ); ?>
 	</div>
 </div>
+<?php ew_buyer_faq_block(); ?>
 <?php
 get_footer();

@@ -41,8 +41,8 @@ get_header();
 						<span class="help-card__icon" aria-hidden="true">✉</span>
 						<h3><?php ew_esc_html_e('Email Us'); ?></h3>
 						<p><?php ew_esc_html_e('Send your target models, quantity or sourcing list — our engineers reply with a quotation and lead time.'); ?></p>
-						<a class="help-card__link" href="mailto:chinyoo08@gmail.com"><?php ew_esc_html_e('Click Here'); ?> <span aria-hidden="true">→</span></a>
-						<span class="help-card__note">chinyoo08@gmail.com</span>
+						<a class="help-card__link" href="mailto:chingycai@chinyoo.com"><?php ew_esc_html_e('Click Here'); ?> <span aria-hidden="true">→</span></a>
+						<span class="help-card__note">chingycai@chinyoo.com</span>
 					</div>
 					<div class="help-card">
 						<span class="help-card__icon" aria-hidden="true">☎</span>
@@ -68,7 +68,7 @@ get_header();
 						<div class="region-item__contact">
 							<span><strong>Jack</strong></span>
 							<span>WhatsApp <a href="https://wa.me/8617706872345" target="_blank" rel="noopener">+86 177 0687 2345</a></span>
-							<span><a href="mailto:sugon163zy@gmail.com">sugon163zy@gmail.com</a></span>
+							<span><a href="mailto:jack@chinyoo.com">jack@chinyoo.com</a></span>
 						</div>
 					</div>
 					<div class="help-card">
@@ -91,7 +91,7 @@ get_header();
 							<div class="region-item__contact">
 								<span><strong>Chingy</strong></span>
 								<span>WhatsApp <a href="https://wa.me/8617816800511" target="_blank" rel="noopener">+86 178 1680 0511</a></span>
-								<span><a href="mailto:chinyoo08@gmail.com">chinyoo08@gmail.com</a></span>
+								<span><a href="mailto:chingycai@chinyoo.com">chingycai@chinyoo.com</a></span>
 							</div>
 						</div>
 					</details>
@@ -102,7 +102,7 @@ get_header();
 							<div class="region-item__contact">
 								<span><strong>Jack</strong></span>
 								<span>WhatsApp <a href="https://wa.me/8617706872345" target="_blank" rel="noopener">+86 177 0687 2345</a></span>
-								<span><a href="mailto:sugon163zy@gmail.com">sugon163zy@gmail.com</a></span>
+								<span><a href="mailto:jack@chinyoo.com">jack@chinyoo.com</a></span>
 							</div>
 						</div>
 					</details>
@@ -113,7 +113,7 @@ get_header();
 							<div class="region-item__contact">
 								<span><strong>Anna</strong></span>
 								<span>WhatsApp <a href="https://wa.me/8617706873456" target="_blank" rel="noopener">+86 177 0687 3456</a></span>
-								<span><a href="mailto:zhengyuan2101@gmail.com">zhengyuan2101@gmail.com</a></span>
+								<span><a href="mailto:anna@chinyoo.com">anna@chinyoo.com</a></span>
 							</div>
 						</div>
 					</details>
@@ -129,7 +129,7 @@ get_header();
 						<p><?php ew_esc_html_e('Order status, invoices, shipping updates and after-purchase questions. Please include your order number when you write.'); ?></p>
 						<div class="region-item__contact">
 							<span><strong><?php ew_esc_html_e('Order Desk'); ?></strong></span>
-							<span><a href="mailto:chinyoo08@gmail.com">chinyoo08@gmail.com</a></span>
+							<span><a href="mailto:chingycai@chinyoo.com">chingycai@chinyoo.com</a></span>
 							<span>WhatsApp <a href="https://wa.me/8617816800511" target="_blank" rel="noopener">+86 178 1680 0511</a></span>
 						</div>
 					</div>
@@ -168,6 +168,7 @@ get_header();
 		</div>
 	</div>
 </div>
+<?php ew_buyer_faq_block(); ?>
 </main>
 
 <script>

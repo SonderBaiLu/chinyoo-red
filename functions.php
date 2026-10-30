@@ -342,7 +342,7 @@ add_filter( 'pre_get_document_title', function ( $title ) {
 		}
 	} elseif ( is_front_page() && ! is_admin() ) {
 		// EN 首页：短标题（原 Rank Math 模板 75 字符，SERP 截断）。
-		return 'CHINYOO — Electrical Measuring Instruments Manufacturer';
+		return 'CHINYOO — Multimeter, Voltage Tester & Clamp Meter Manufacturer';
 	}
 	return $title;
 }, 40 );
@@ -451,7 +451,8 @@ add_action( 'wp_head', function () {
 		'@id'             => $home . '#website',
 		'url'             => $home,
 		'name'            => get_bloginfo( 'name' ),
-		'alternateName'   => 'Electrical World',
+		// 不设 alternateName：'Electrical World' 是早期品牌，在 llms.txt 里以
+		// 「formerly branded」的曾用名写法出现，与 schema 的「现用别名」语义不同。
 		'description'     => 'Professional test & measurement instrument manufacturer in Wenzhou, China — digital multimeters, clamp meters, voltage testers, and battery testers.',
 		'publisher'       => array( '@id' => $ew_ws_home . '#organization' ),
 		'inLanguage'      => ew_schema_lang(),
@@ -1032,7 +1033,36 @@ function ew_build_mega_tree() {
             }
             $panels_html .= '</ul>';
         } else {
-            $panels_html .= '<p class="c-mega-empty">' . ew_esc_html__( 'Series data updating...' ) . '</p>';
+            // 顶层分类下没有可见子分类时（如 Clamp Meters —— 其唯一子分类 digital-clamp-meters
+            // 已合并 301 到父级并被本文件排除），直接列该分类下的系列/产品页，
+            // 避免下拉面板出现 "Series data updating..." 死状态。
+            $fallback_items = get_posts( array(
+                'post_type'        => 'product',
+                'post_status'      => 'publish',
+                'posts_per_page'   => 24,
+                'orderby'          => 'menu_order title',
+                'order'            => 'ASC',
+                'tax_query'        => array( array(
+                    'taxonomy' => 'product_cat',
+                    'field'    => 'term_id',
+                    'terms'    => (int) $cat->term_id,
+                ) ),
+                'suppress_filters' => false,
+            ) );
+
+            if ( ! empty( $fallback_items ) ) {
+                $panels_html .= '<ul class="c-mega-subgrid">';
+                foreach ( $fallback_items as $fp ) {
+                    $panels_html .= sprintf(
+                        '<li><a href="%s" class="c-mega-sublink">%s</a></li>',
+                        esc_url( get_permalink( $fp ) ),
+                        esc_html( get_the_title( $fp ) )
+                    );
+                }
+                $panels_html .= '</ul>';
+            } else {
+                $panels_html .= '<p class="c-mega-empty">' . ew_esc_html__( 'Series data updating...' ) . '</p>';
+            }
         }
         $panels_html .= '</div>';
     }
@@ -1188,4 +1218,71 @@ function ew_author_by_label() {
     );
     $lang = ew_author_lang();
     return isset( $map[ $lang ] ) ? $map[ $lang ] : $map['en'];
+}
+
+/**
+ * 2026-10-28 抓取预算整理（zz）
+ *
+ * 1) /downloads/<slug>/ 68 个文档详情页没有 single-download.php，落到文章模板回退：
+ *    面包屑写着 Home / News、带作者框、正文里连一个 PDF 链接都没有 —— 空壳页。
+ * 2) 六个 category 归档（news 系列）与 /news/ 重复。
+ * 两类合计 74 个 URL 占 sitemap 5.7%，全部 noindex；sitemap 侧另行关闭。
+ * 回滚：删掉本段 + functions.php.bak.20261028_prune
+ */
+add_filter( 'rank_math/frontend/robots', function ( $robots ) {
+	$kill = false;
+	if ( is_singular( 'download' ) ) {
+		$kill = true;
+	} elseif ( is_category() ) {
+		$term = get_queried_object();
+		if ( $term && ! empty( $term->slug ) && 0 === strpos( $term->slug, 'news' ) ) {
+			$kill = true;
+		}
+	}
+	if ( $kill ) {
+		$robots = array( 'index' => 'noindex', 'follow' => 'follow' );
+	}
+	return $robots;
+}, 20 );
+
+/**
+ * 2026-10-28 买家 FAQ 入链（zz）
+ *
+ * /faqs/ 下 10 条在 sitemap 里躺了数月，URL Inspection 一律
+ * "Discovered - currently not indexed"，从未被抓。实测：四个已收录商务页
+ * （/about-us/ /oem/ /quote/ /contact-us/）正文里指向 /faqs/ 的链接为 0，
+ * 唯一入口是那个同样没被抓的 /faqs/ 归档页 —— 这批页在"已抓集合"里是孤儿。
+ * 这四个页面 post_content 为空、全部由 page-*.php 模板渲染，the_content 过滤器
+ * 不生效，因此本块由模板直接调用 ew_buyer_faq_block()。
+ *
+ * 只对英文页输出（译文页的 pll_current_language 不是 en）。
+ * 回滚：删掉本段，并还原 page-{about,oem,contact,quote}.php
+ *       + functions.php.bak.20261028_faqlink
+ */
+if ( ! function_exists( 'ew_buyer_faq_block' ) ) {
+	function ew_buyer_faq_block() {
+		if ( function_exists( 'pll_current_language' ) && 'en' !== pll_current_language() ) {
+			return;
+		}
+		$items = array(
+			'how-do-i-choose-the-right-multimeter-or-tester-for-my-market' => 'How do I choose the right multimeter or tester for my market?',
+			'can-i-get-samples-before-placing-a-bulk-order'                => 'Can I get samples before placing a bulk order?',
+			'what-is-the-minimum-order-quantity-moq'                       => 'What is the minimum order quantity (MOQ)?',
+			'do-you-support-custom-branding-oem-odm'                       => 'Do you support custom branding (OEM / ODM)?',
+			'what-are-your-payment-terms'                                  => 'What are your payment terms?',
+			'how-long-is-the-lead-time'                                    => 'How long is the lead time?',
+			'are-your-instruments-ce-and-rohs-certified'                   => 'Are your instruments CE and RoHS certified?',
+			'what-is-the-warranty-on-your-products'                        => 'What is the warranty on your products?',
+			'can-i-visit-your-factory-in-wenzhou'                          => 'Can I visit your factory in Wenzhou?',
+		);
+		echo '<section class="ew-buyer-faq" style="max-width:1100px;margin:56px auto;padding:0 20px">';
+		echo '<h2 class="sec-title" id="buyer-faq">' . esc_html( 'Common buyer questions' ) . '</h2>';
+		echo '<ul style="list-style:none;padding:0;margin:18px 0 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px 24px">';
+		foreach ( $items as $slug => $label ) {
+			echo '<li><a href="' . esc_url( home_url( '/faqs/' . $slug . '/' ) ) . '">' . esc_html( $label ) . '</a></li>';
+		}
+		echo '</ul>';
+		echo '<p style="margin-top:18px"><a href="' . esc_url( home_url( '/faqs/' ) ) . '">' . esc_html( 'All buyer questions' ) . '</a></p>';
+		echo '</section>';
+	}
 }

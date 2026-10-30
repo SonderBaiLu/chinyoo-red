@@ -25,24 +25,37 @@ if ( ! defined( 'ABSPATH' ) ) {
 function ew_product_guide_map() {
 	return array(
 		// 数字万用表
-		'a830l-series'  => array( 'a830l-digital-multimeter-guide' ),
-		'dt700-series'  => array( 'dt700-digital-multimeter-guide' ),
-		'dt830-series'  => array( 'dt830-digital-multimeter-guide' ),
-		'dt9205-series' => array( 'dt9205a-digital-multimeter-guide' ),
+		'156_a830l-digital-multimeter'  => array( 'a830l-digital-multimeter-guide' ),
+		'dt700b'  => array( 'dt700-digital-multimeter-guide' ),
+		'dt830d'  => array( 'dt830-digital-multimeter-guide' ),
+		'dt9205a' => array( 'dt9205a-digital-multimeter-guide' ),
+		// 批次 4/5 的单品指南此前没有任何产品指向，长期停在 Discovered、lastCrawl 为空。
+		// 2026-10-23 补登记（每型号 ≤3 条，single-product.php 逐条渲染 banner）。
+		'vc17-series'   => array( 'vc17-digital-multimeter-guide' ),
+		'vc9805' => array( 'vc9805-digital-multimeter-guide' ),
+		'154_st105-digital-multimeter'  => array( 'st105-digital-multimeter-guide' ),
+		// 批次 7（2026-10-22）：汽车电瓶三篇（怎么测 / 选哪个 / 启动压降）。
+		// 2026-10-23 起每型号把自家单品指南放第一位，让位给「启动压降」那篇
+		// （它仍由另两篇的 Related Guides 与分类页兜住），总数保持 3 条不越线。
+		'155_dt6222-digital-multimeter'            => array( 'dt6222-digital-multimeter-guide', 'multimeter-for-electricians', 'test-car-battery-with-multimeter' ),
+		// 2026-10-29 批次 6：《电工选表》直接对比 XT802 / DT6222，《价格构成》承接采购意图。
+		// 为守住每条目 ≤3 条，两条汽车电瓶让位（仍由 dt33c / dt6222 与文章级 Related Guides 兜住）。
+		'xt802' => array( 'xt802-digital-multimeter-guide', 'multimeter-for-electricians', 'multimeter-price-factory-vs-retail' ),
+		'dt33c'              => array( 'dt33-digital-multimeter-guide', 'test-car-battery-with-multimeter', 'multimeter-for-car-battery' ),
 		// 钳形表
-		'266-series'                     => array( '266-series-digital-clamp-meter', 'clamp-meter-how-to-use' ),
-		'xt266-series'                   => array( '266-series-digital-clamp-meter', 'clamp-meter-how-to-use' ),
-		'vc3268-series'                  => array( 'vc3268-digital-clamp-meter-guide', 'clamp-meter-how-to-use' ),
-		'vc3269-digital-clamp-meter'     => array( 'clamp-meter-how-to-use' ),
-		'vc3270-digital-clamp-meter'     => array( 'clamp-meter-how-to-use' ),
+		'266c'                     => array( '266-series-digital-clamp-meter', 'clamp-meter-how-to-use' ),
+		'130_xt266-digital-clamp-meter'                   => array( '266-series-digital-clamp-meter', 'clamp-meter-how-to-use' ),
+		'vc3268'                  => array( 'vc3268-digital-clamp-meter-guide', 'clamp-meter-how-to-use' ),
+		'vc3269'     => array( 'clamp-meter-how-to-use' ),
+		'vc3270'     => array( 'clamp-meter-how-to-use' ),
 		// 电压测试笔
-		'88-2-series'      => array( '88-2-voltage-test-pen-guide' ),
+		'88-2-digital-voltage-tester'      => array( '88-2-voltage-test-pen-guide' ),
 		'6877-58-series'   => array( '6877-58-induction-voltage-tester-guide' ),
 		'6885-48-series'   => array( '6885-48-digital-voltage-tester-guide' ),
 		'1881-series'      => array( '1881-digital-inductive-voltage-tester' ),
 		'vd06-series'      => array( 'voltage-tester-vs-multimeter' ),
 		// 插座测试 / 温度 / 红外 / 电池
-		'socket-tester-series'       => array( 'outlet-tester-guide' ),
+		'socket-tester-series'       => array( 'outlet-tester-guide', 'gfi-vs-gfci' ),
 		'ht9269-multi-thermometer'   => array( 'ht9269-multi-channel-thermometer-guide' ),
 		'htc-2-temperature-meter'    => array( 'htc-2-temperature-humidity-meter-guide' ),
 		'gm320'                      => array( 'infrared-thermometer-guide' ),
