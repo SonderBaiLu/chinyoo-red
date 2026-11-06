@@ -48,11 +48,6 @@ function ew_n( $single, $plural, $n ) {
 /**
  * Language flag — inline flat SVG for the header switcher.
  *
- * NOTE: the switcher now shows language names only (button = code, menu = native
- * name), so nothing calls these two functions at the moment. They are kept so a
- * flat vector flag can be dropped back into the header or menu in one line
- * without re-drawing the artwork.
- *
  * Polylang ships a bitmap flag per language (plugins/polylang/flags/xx.png).
  * Those are small, rounded-corner bitmaps, so they read soft/blurry next to
  * crisp UI text. We draw our own 4:3 vector instead: hard corners, flat fills,

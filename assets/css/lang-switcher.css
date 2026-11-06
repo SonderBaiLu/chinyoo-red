@@ -39,6 +39,19 @@
 	color: var(--c-brand);
 }
 
+/* 扁平面旗：4:3、直角、纯色块。宽度写死，高度由 viewBox 比例撑开。
+   取代 mu-plugins/chinyoo-lang-flags.php 曾用 CSS ::before 塞的 Polylang PNG
+   （小位图 + 2px 圆角，放大发虚），该 mu-plugin 已下线。 */
+.lang-switcher__flag {
+	width: 18px;
+	height: auto;
+	display: block;
+	flex: 0 0 auto;
+	border-radius: 0;
+	/* 白底旗（波兰/俄罗斯）压在浅色面板上需要一条边界，内阴影不占布局 */
+	box-shadow: inset 0 0 0 1px rgba(15, 20, 26, .2);
+}
+
 /* 下拉：3 列等宽网格，居中于按钮，白底跟随站点主题 */
 .lang-switcher__menu {
 	position: absolute;
@@ -150,6 +163,9 @@ html[dir="rtl"] .lang-switcher__menu {
 	.lang-switcher__btn {
 		padding: 5px 8px;
 		font-size: var(--fs-2xs);
+	}
+	.lang-switcher__flag {
+		width: 16px;
 	}
 	.lang-switcher__menu {
 		width: 304px;
