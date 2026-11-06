@@ -16,7 +16,7 @@
 <div class="topbar"><div class="container">
 	<span>CE (EMC/LVD) · RoHS · ISO 9001</span>
 	<span><?php ew_esc_html_e('Wenzhou, China'); ?></span>
-	<span>+86 178 1680 0511</span>
+	<span><a href="mailto:chingycai@chinyoo.com">chingycai@chinyoo.com</a></span>
 </div></div>
 
 <header class="site-header">

@@ -1,0 +1,1010 @@
+{
+  "088-1": {
+    "id": 4302,
+    "sku": "088-1",
+    "model": "088-1",
+    "category": "voltage-testers"
+  },
+  "119-1": {
+    "id": 4309,
+    "sku": "119-1",
+    "model": "119-1",
+    "category": "voltage-testers"
+  },
+  "12# voltage tester": {
+    "id": 6378,
+    "sku": "12# voltage tester",
+    "model": "12#",
+    "category": "digital-voltage-testers"
+  },
+  "123_xt2017 digital clamp meter": {
+    "id": 4555,
+    "sku": "123_XT2017 digital clamp meter",
+    "model": "XT2017",
+    "category": "digital-clamp-meters"
+  },
+  "130405": {
+    "id": 4864,
+    "sku": "130405",
+    "model": "130405",
+    "category": "digital-voltage-testers"
+  },
+  "130605": {
+    "id": 5603,
+    "sku": "130605",
+    "model": "130605",
+    "category": "basic-voltage-testers"
+  },
+  "130805": {
+    "id": 5845,
+    "sku": "130805",
+    "model": "130805",
+    "category": "digital-voltage-testers"
+  },
+  "130805 digital voltage tester": {
+    "id": 6408,
+    "sku": "130805 Digital voltage tester",
+    "model": "130805",
+    "category": "digital-voltage-testers"
+  },
+  "130855 digital & light voltage tester": {
+    "id": 6418,
+    "sku": "130855 Digital & light voltage tester",
+    "model": "130855",
+    "category": "digital-voltage-testers"
+  },
+  "130_xt266 digital clamp meter": {
+    "id": 4570,
+    "sku": "130_XT266 digital clamp meter",
+    "model": "XT266",
+    "category": "digital-clamp-meters"
+  },
+  "134_mt2010a digital clamp meter": {
+    "id": 4578,
+    "sku": "134_MT2010A digital clamp meter",
+    "model": "MT2010A",
+    "category": "digital-clamp-meters"
+  },
+  "135_st201 digital clamp meter": {
+    "id": 4586,
+    "sku": "135_ST201 digital clamp meter",
+    "model": "ST201",
+    "category": "digital-clamp-meters"
+  },
+  "138_dt3266l digital clamp meter": {
+    "id": 4315,
+    "sku": "138_DT3266L digital clamp meter",
+    "model": "DT3266L",
+    "category": "digital-clamp-meters"
+  },
+  "139_mt87 digital clamp meter": {
+    "id": 4593,
+    "sku": "139_MT87 digital clamp meter",
+    "model": "MT87",
+    "category": "digital-clamp-meters"
+  },
+  "144_vc16b digital multimeter": {
+    "id": 4602,
+    "sku": "144_VC16B digital multimeter",
+    "model": "VC16B",
+    "category": "digital-multimeters"
+  },
+  "145_my62 digital multimeter": {
+    "id": 4609,
+    "sku": "145_MY62 digital multimeter",
+    "model": "MY62",
+    "category": "digital-multimeters"
+  },
+  "147_vc890l digital multimeter": {
+    "id": 6482,
+    "sku": "147_VC890L digital multimeter",
+    "model": "VC890L",
+    "category": "digital-multimeters"
+  },
+  "148_vc890d digital multimeter": {
+    "id": 4632,
+    "sku": "148_VC890D digital multimeter",
+    "model": "VC890D",
+    "category": "digital-multimeters"
+  },
+  "149_vc9808 digital multimeter": {
+    "id": 4323,
+    "sku": "149_VC9808 digital multimeter",
+    "model": "VC9808",
+    "category": "digital-multimeters"
+  },
+  "154_st105 digital multimeter": {
+    "id": 4640,
+    "sku": "154_ST105 digital multimeter",
+    "model": "ST105",
+    "category": "digital-multimeters"
+  },
+  "155_dt6222 digital multimeter": {
+    "id": 4648,
+    "sku": "155_DT6222 digital multimeter",
+    "model": "DT6222",
+    "category": "digital-multimeters"
+  },
+  "156_a830l digital multimeter": {
+    "id": 4656,
+    "sku": "156_A830L digital multimeter",
+    "model": "A830L",
+    "category": "digital-multimeters"
+  },
+  "164_dt9216 digital multimeter": {
+    "id": 4664,
+    "sku": "164_DT9216 digital multimeter",
+    "model": "DT9216",
+    "category": "digital-multimeters"
+  },
+  "177_1ac-d voltage tester": {
+    "id": 4670,
+    "sku": "177_1AC-D voltage tester",
+    "model": "1AC-D",
+    "category": "digital-voltage-testers"
+  },
+  "179_htc-1 temperature meter": {
+    "id": 4677,
+    "sku": "179_HTC-1 Temperature Meter",
+    "model": "HTC-1",
+    "category": "others"
+  },
+  "1802 voltage tester": {
+    "id": 4331,
+    "sku": "1802 voltage tester",
+    "model": "1802",
+    "category": "digital-voltage-testers"
+  },
+  "1803 voltage tester": {
+    "id": 4338,
+    "sku": "1803 voltage tester",
+    "model": "1803",
+    "category": "digital-voltage-testers"
+  },
+  "1803-1 voltage tester": {
+    "id": 6562,
+    "sku": "1803-1 voltage tester",
+    "model": "1803-1",
+    "category": "digital-voltage-testers"
+  },
+  "1805a": {
+    "id": 5612,
+    "sku": "1805a",
+    "model": "1805a",
+    "category": "basic-voltage-testers"
+  },
+  "1805b voltage tester": {
+    "id": 6574,
+    "sku": "1805B voltage tester",
+    "model": "1805B",
+    "category": "digital-voltage-testers"
+  },
+  "1805c": {
+    "id": 4871,
+    "sku": "1805C",
+    "model": "1805C",
+    "category": "voltage-testers"
+  },
+  "1805d": {
+    "id": 4878,
+    "sku": "1805D",
+    "model": "1805D",
+    "category": "digital-voltage-testers"
+  },
+  "1806-1 voltage tester": {
+    "id": 6598,
+    "sku": "1806-1 voltage tester",
+    "model": "1806-1",
+    "category": "digital-voltage-testers"
+  },
+  "1806-2": {
+    "id": 4435,
+    "sku": "1806-2",
+    "model": "1806-2",
+    "category": "voltage-testers"
+  },
+  "1807": {
+    "id": 5620,
+    "sku": "1807",
+    "model": "1807",
+    "category": "basic-voltage-testers"
+  },
+  "1808": {
+    "id": 5626,
+    "sku": "1808",
+    "model": "1808",
+    "category": "digital-voltage-testers"
+  },
+  "1809": {
+    "id": 5632,
+    "sku": "1809",
+    "model": "1809",
+    "category": "digital-voltage-testers"
+  },
+  "1809-2": {
+    "id": 6629,
+    "sku": "1809-2",
+    "model": "1809-2",
+    "category": "digital-voltage-testers"
+  },
+  "182_dt181 digital multimeter": {
+    "id": 4685,
+    "sku": "182_DT181 digital multimeter",
+    "model": "DT181",
+    "category": "digital-multimeters"
+  },
+  "183_dt83b digital multimeter": {
+    "id": 4695,
+    "sku": "183_DT83B digital multimeter",
+    "model": "DT83B",
+    "category": "digital-multimeters"
+  },
+  "185_ac-1 voltage tester": {
+    "id": 4702,
+    "sku": "185_AC-1 Voltage Tester",
+    "model": "AC-1",
+    "category": "digital-voltage-testers"
+  },
+  "1881": {
+    "id": 5850,
+    "sku": "1881",
+    "model": "1881",
+    "category": "digital-voltage-testers"
+  },
+  "1888 voltage tester": {
+    "id": 6672,
+    "sku": "1888 voltage tester",
+    "model": "1888",
+    "category": "digital-voltage-testers"
+  },
+  "189_hs-1 temperature meter": {
+    "id": 4710,
+    "sku": "189_HS-1 Temperature Meter",
+    "model": "HS-1",
+    "category": "others"
+  },
+  "190_m200 pen-type voltage tester": {
+    "id": 4718,
+    "sku": "190_M200 Pen-Type Voltage Tester",
+    "model": "M200",
+    "category": "digital-voltage-testers"
+  },
+  "194_dt850l digital multimeter": {
+    "id": 4726,
+    "sku": "194_DT850L digital multimeter",
+    "model": "DT850L",
+    "category": "digital-multimeters"
+  },
+  "2000v矿用": {
+    "id": 5316,
+    "sku": "2000V矿用",
+    "model": "2000V矿用",
+    "category": "voltage-testers"
+  },
+  "236a": {
+    "id": 5325,
+    "sku": "236A",
+    "model": "236A",
+    "category": "digital-multimeters"
+  },
+  "237a": {
+    "id": 5334,
+    "sku": "237A",
+    "model": "237A",
+    "category": "digital-multimeters"
+  },
+  "266": {
+    "id": 6705,
+    "sku": "266",
+    "model": "266",
+    "category": "others"
+  },
+  "266c digital clamp meter": {
+    "id": 6717,
+    "sku": "266C digital clamp meter",
+    "model": "266C",
+    "category": "digital-clamp-meters"
+  },
+  "266ft": {
+    "id": 5343,
+    "sku": "266FT",
+    "model": "266FT",
+    "category": "clamp-meters"
+  },
+  "322a-b": {
+    "id": 5361,
+    "sku": "322A-B",
+    "model": "322A-B",
+    "category": "digital-multimeters"
+  },
+  "32a": {
+    "id": 5370,
+    "sku": "32A",
+    "model": "32A",
+    "category": "digital-multimeters"
+  },
+  "605 voltage tester": {
+    "id": 7039,
+    "sku": "605 voltage tester",
+    "model": "605",
+    "category": "digital-voltage-testers"
+  },
+  "646 voltage tester": {
+    "id": 7051,
+    "sku": "646 voltage tester",
+    "model": "646",
+    "category": "digital-voltage-testers"
+  },
+  "6877-18": {
+    "id": 5855,
+    "sku": "6877-18",
+    "model": "6877-18",
+    "category": "digital-voltage-testers"
+  },
+  "6877-58": {
+    "id": 5860,
+    "sku": "6877-58",
+    "model": "6877-58",
+    "category": "digital-voltage-testers"
+  },
+  "6885-48": {
+    "id": 5866,
+    "sku": "6885-48",
+    "model": "6885-48",
+    "category": "digital-voltage-testers"
+  },
+  "721": {
+    "id": 5379,
+    "sku": "721",
+    "model": "721",
+    "category": "digital-multimeters"
+  },
+  "83b": {
+    "id": 5392,
+    "sku": "83B",
+    "model": "83B",
+    "category": "digital-multimeters"
+  },
+  "83c": {
+    "id": 5401,
+    "sku": "83C",
+    "model": "83C",
+    "category": "digital-multimeters"
+  },
+  "88-2 digital voltage tester": {
+    "id": 4460,
+    "sku": "88-2 Digital voltage tester",
+    "model": "88-2",
+    "category": "digital-voltage-testers"
+  },
+  "88-4 voltage tester": {
+    "id": 4468,
+    "sku": "88-4 voltage tester",
+    "model": "88-4",
+    "category": "digital-voltage-testers"
+  },
+  "88a": {
+    "id": 4751,
+    "sku": "88A",
+    "model": "88A",
+    "category": "digital-clamp-meters"
+  },
+  "88a digital clamp meter": {
+    "id": 7115,
+    "sku": "88A digital clamp meter",
+    "model": "88A",
+    "category": "digital-clamp-meters"
+  },
+  "battery meter": {
+    "id": 5712,
+    "sku": "Battery Meter",
+    "model": "Battery Meter",
+    "category": "battery-meters"
+  },
+  "bt169": {
+    "id": 5410,
+    "sku": "BT169",
+    "model": "BT169",
+    "category": "battery-meters"
+  },
+  "dm101": {
+    "id": 5576,
+    "sku": "DM101",
+    "model": "DM101",
+    "category": "basic-digital-multimeters"
+  },
+  "dm102": {
+    "id": 5568,
+    "sku": "DM102",
+    "model": "DM102",
+    "category": "basic-digital-multimeters"
+  },
+  "dm6266": {
+    "id": 5552,
+    "sku": "dm6266",
+    "model": "DM6266",
+    "category": "digital-clamp-meters"
+  },
+  "dm9205a digital multimeter": {
+    "id": 7127,
+    "sku": "DM9205A digital multimeter",
+    "model": "DM9205A",
+    "category": "digital-multimeters"
+  },
+  "dm9205a-1": {
+    "id": 4769,
+    "sku": "DM9205A-1",
+    "model": "DM9205A-1",
+    "category": "digital-multimeters"
+  },
+  "dm9205a-1 digital multimeter": {
+    "id": 7139,
+    "sku": "DM9205A-1 digital multimeter",
+    "model": "DM9205A-1",
+    "category": "digital-multimeters"
+  },
+  "dt182 digital multimeter": {
+    "id": 7151,
+    "sku": "DT182 digital multimeter",
+    "model": "DT182",
+    "category": "digital-multimeters"
+  },
+  "dt266f digital clamp meter": {
+    "id": 7165,
+    "sku": "DT266F digital clamp meter",
+    "model": "DT266F",
+    "category": "digital-clamp-meters"
+  },
+  "dt33c": {
+    "id": 5420,
+    "sku": "DT33C",
+    "model": "DT33C",
+    "category": "digital-multimeters"
+  },
+  "dt6221": {
+    "id": 4787,
+    "sku": "DT6221",
+    "model": "DT6221",
+    "category": "digital-multimeters"
+  },
+  "dt700b digital multimeter": {
+    "id": 7196,
+    "sku": "DT700B digital multimeter",
+    "model": "DT700B",
+    "category": "digital-multimeters"
+  },
+  "dt700c digital multimeter": {
+    "id": 7207,
+    "sku": "DT700C digital multimeter",
+    "model": "DT700C",
+    "category": "digital-multimeters"
+  },
+  "dt700d digital multimeter": {
+    "id": 7219,
+    "sku": "DT700D digital multimeter",
+    "model": "DT700D",
+    "category": "digital-multimeters"
+  },
+  "dt700d-1": {
+    "id": 4794,
+    "sku": "DT700D-1",
+    "model": "DT700D-1",
+    "category": "digital-multimeters"
+  },
+  "dt830d digital multimeter": {
+    "id": 7236,
+    "sku": "DT830D digital multimeter",
+    "model": "DT830D",
+    "category": "digital-multimeters"
+  },
+  "dt830l": {
+    "id": 4800,
+    "sku": "DT830L",
+    "model": "DT830L",
+    "category": "digital-multimeters"
+  },
+  "dt832": {
+    "id": 4808,
+    "sku": "DT832",
+    "model": "DT832",
+    "category": "digital-multimeters"
+  },
+  "dt838": {
+    "id": 5429,
+    "sku": "DT838",
+    "model": "DT838",
+    "category": "digital-multimeters"
+  },
+  "dt83c": {
+    "id": 4885,
+    "sku": "DT83C",
+    "model": "DT83C",
+    "category": "digital-multimeters"
+  },
+  "dt9205a+": {
+    "id": 5438,
+    "sku": "DT9205A+",
+    "model": "DT9205A+",
+    "category": "digital-multimeters"
+  },
+  "dt9208a": {
+    "id": 5447,
+    "sku": "DT9208A",
+    "model": "DT9208A",
+    "category": "digital-multimeters"
+  },
+  "dt9210": {
+    "id": 5997,
+    "sku": "DT9210",
+    "model": "DT9210",
+    "category": "professional-digital-multimeters"
+  },
+  "dt9216 digital multimeter": {
+    "id": 7290,
+    "sku": "DT9216 digital multimeter",
+    "model": "DT9216",
+    "category": "digital-multimeters"
+  },
+  "ew001": {
+    "id": 5641,
+    "sku": "ew001",
+    "model": "EW001",
+    "category": "digital-voltage-testers"
+  },
+  "ew002": {
+    "id": 5651,
+    "sku": "ew002",
+    "model": "EW002",
+    "category": "digital-voltage-testers"
+  },
+  "ew005": {
+    "id": 5661,
+    "sku": "ew005",
+    "model": "EW005",
+    "category": "digital-voltage-testers"
+  },
+  "ew006": {
+    "id": 5671,
+    "sku": "ew006",
+    "model": "EW006",
+    "category": "digital-voltage-testers"
+  },
+  "ew007": {
+    "id": 5681,
+    "sku": "ew007",
+    "model": "EW007",
+    "category": "digital-voltage-testers"
+  },
+  "gm320": {
+    "id": 5456,
+    "sku": "GM320",
+    "model": "GM320",
+    "category": "others"
+  },
+  "ht9269": {
+    "id": 6039,
+    "sku": "HT9269",
+    "model": "HT9269",
+    "category": "others"
+  },
+  "htc-2": {
+    "id": 6025,
+    "sku": "HTC-2",
+    "model": "HTC-2",
+    "category": "others"
+  },
+  "hw170": {
+    "id": 5722,
+    "sku": "HW170",
+    "model": "HW170",
+    "category": "others"
+  },
+  "hw171": {
+    "id": 5691,
+    "sku": "HW171",
+    "model": "HW171",
+    "category": "battery-meters"
+  },
+  "hw172": {
+    "id": 5701,
+    "sku": "HW172",
+    "model": "HW172",
+    "category": "battery-meters"
+  },
+  "hw304": {
+    "id": 5731,
+    "sku": "hw304",
+    "model": "HW304",
+    "category": "car-electric-pens"
+  },
+  "hw305": {
+    "id": 5741,
+    "sku": "hw305",
+    "model": "HW305",
+    "category": "others"
+  },
+  "hw306": {
+    "id": 5751,
+    "sku": "hw306",
+    "model": "HW306",
+    "category": "others"
+  },
+  "hw307": {
+    "id": 5761,
+    "sku": "hw307",
+    "model": "HW307",
+    "category": "others"
+  },
+  "hw308": {
+    "id": 5771,
+    "sku": "hw308",
+    "model": "HW308",
+    "category": "others"
+  },
+  "hw309": {
+    "id": 5781,
+    "sku": "hw309",
+    "model": "HW309",
+    "category": "others"
+  },
+  "hw310": {
+    "id": 5791,
+    "sku": "HW310",
+    "model": "HW310",
+    "category": "others"
+  },
+  "hw311": {
+    "id": 5876,
+    "sku": "hw311",
+    "model": "HW311",
+    "category": "battery-meters"
+  },
+  "hw312": {
+    "id": 5886,
+    "sku": "hw312",
+    "model": "HW312",
+    "category": "digital-voltage-testers"
+  },
+  "hw313": {
+    "id": 5896,
+    "sku": "hw313",
+    "model": "HW313",
+    "category": "digital-voltage-testers"
+  },
+  "hw65": {
+    "id": 5801,
+    "sku": "HW65",
+    "model": "HW65",
+    "category": "others"
+  },
+  "hw68": {
+    "id": 5810,
+    "sku": "hw68",
+    "model": "HW68B",
+    "category": "car-electric-pens"
+  },
+  "hw68b": {
+    "id": 7351,
+    "sku": "HW68B",
+    "model": "HW68B",
+    "category": "others"
+  },
+  "hw80": {
+    "id": 5820,
+    "sku": "hw80",
+    "model": "HW80",
+    "category": "others"
+  },
+  "m100": {
+    "id": 4537,
+    "sku": "M100",
+    "model": "M100",
+    "category": "digital-voltage-testers"
+  },
+  "m100 voltage tester": {
+    "id": 7363,
+    "sku": "M100 voltage tester",
+    "model": "M100",
+    "category": "digital-voltage-testers"
+  },
+  "mas838l": {
+    "id": 4893,
+    "sku": "MAS838L",
+    "model": "MAS838L",
+    "category": "digital-multimeters"
+  },
+  "md3003b": {
+    "id": 6018,
+    "sku": "MD3003B",
+    "model": "MD3003B",
+    "category": "others"
+  },
+  "md830": {
+    "id": 7740,
+    "sku": "md830",
+    "model": "MD830",
+    "category": "digital-multimeters"
+  },
+  "md830b": {
+    "id": 5584,
+    "sku": "MD830B",
+    "model": "MD830B",
+    "category": "basic-digital-multimeters"
+  },
+  "mvd765": {
+    "id": 5906,
+    "sku": "mvd765",
+    "model": "MVD765",
+    "category": "digital-voltage-testers"
+  },
+  "mvd765a": {
+    "id": 7752,
+    "sku": "mvd765A",
+    "model": "MVD765A",
+    "category": "digital-voltage-testers"
+  },
+  "my62": {
+    "id": 5465,
+    "sku": "MY62",
+    "model": "MY62",
+    "category": "digital-multimeters"
+  },
+  "my64 - red": {
+    "id": 4901,
+    "sku": "MY64 - red",
+    "model": "MY64",
+    "category": "digital-multimeters"
+  },
+  "my64 digital multimeter": {
+    "id": 7395,
+    "sku": "MY64 digital multimeter",
+    "model": "MY64",
+    "category": "digital-multimeters"
+  },
+  "sg5003a": {
+    "id": 5916,
+    "sku": "sg5003A",
+    "model": "SG5003A",
+    "category": "others"
+  },
+  "sg8001": {
+    "id": 5926,
+    "sku": "sg8001",
+    "model": "SG8001",
+    "category": "others"
+  },
+  "socket tester": {
+    "id": 5591,
+    "sku": "Socket Tester",
+    "model": "Socket Tester",
+    "category": "socket-testers"
+  },
+  "socket-tester": {
+    "id": 7778,
+    "sku": "socket-tester",
+    "model": "Socket Tester",
+    "category": "socket-testers"
+  },
+  "u8": {
+    "id": 5474,
+    "sku": "U8",
+    "model": "U8",
+    "category": "digital-multimeters"
+  },
+  "u8a": {
+    "id": 5483,
+    "sku": "U8A",
+    "model": "U8A",
+    "category": "digital-multimeters"
+  },
+  "vc1210 digital clamp meter": {
+    "id": 7409,
+    "sku": "VC1210 digital clamp meter",
+    "model": "VC1210",
+    "category": "digital-clamp-meters"
+  },
+  "vc15a": {
+    "id": 5492,
+    "sku": "VC15A",
+    "model": "VC15A",
+    "category": "digital-multimeters"
+  },
+  "vc17b+": {
+    "id": 5560,
+    "sku": "VC17B+",
+    "model": "VC17B+",
+    "category": "professional-digital-multimeters"
+  },
+  "vc3266a+": {
+    "id": 4916,
+    "sku": "VC3266A+",
+    "model": "VC3266A+",
+    "category": "digital-clamp-meters"
+  },
+  "vc3266l+": {
+    "id": 4925,
+    "sku": "VC3266L+",
+    "model": "VC3266L+",
+    "category": "digital-clamp-meters"
+  },
+  "vc3266l+ 2": {
+    "id": 7437,
+    "sku": "VC3266L+ 2",
+    "model": "VC3266L+ 2",
+    "category": "others"
+  },
+  "vc3268": {
+    "id": 4934,
+    "sku": "VC3268",
+    "model": "VC3268",
+    "category": "digital-clamp-meters"
+  },
+  "vc3269": {
+    "id": 4942,
+    "sku": "VC3269",
+    "model": "VC3269",
+    "category": "digital-clamp-meters"
+  },
+  "vc3270": {
+    "id": 4950,
+    "sku": "VC3270",
+    "model": "VC3270",
+    "category": "digital-clamp-meters"
+  },
+  "vc3298": {
+    "id": 5501,
+    "sku": "VC3298",
+    "model": "VC3298",
+    "category": "digital-multimeters"
+  },
+  "vc6018g": {
+    "id": 7470,
+    "sku": "VC6018G",
+    "model": "VC6018G",
+    "category": "clamp-meters"
+  },
+  "vc6018g-2": {
+    "id": 4958,
+    "sku": "VC6018G-2",
+    "model": "VC6018G-2",
+    "category": "digital-clamp-meters"
+  },
+  "vc890l": {
+    "id": 5510,
+    "sku": "VC890L",
+    "model": "VC890L",
+    "category": "digital-multimeters"
+  },
+  "vc9805": {
+    "id": 4826,
+    "sku": "VC9805",
+    "model": "VC9805",
+    "category": "digital-multimeters"
+  },
+  "vc9805-1": {
+    "id": 4966,
+    "sku": "VC9805-1",
+    "model": "VC9805-1",
+    "category": "digital-multimeters"
+  },
+  "vd02": {
+    "id": 5947,
+    "sku": "vd02",
+    "model": "VD02",
+    "category": "others"
+  },
+  "vd06": {
+    "id": 5957,
+    "sku": "vd06",
+    "model": "VD06",
+    "category": "others"
+  },
+  "vd10": {
+    "id": 5967,
+    "sku": "VD10",
+    "model": "VD10",
+    "category": "inductive-alarm-testers"
+  },
+  "vd11": {
+    "id": 5978,
+    "sku": "VD11",
+    "model": "VD11",
+    "category": "digital-voltage-testers"
+  },
+  "vd123": {
+    "id": 5989,
+    "sku": "VD123",
+    "model": "VD123",
+    "category": "digital-voltage-testers"
+  },
+  "vd211 voltage tester": {
+    "id": 7528,
+    "sku": "VD211 voltage tester",
+    "model": "VD211",
+    "category": "digital-voltage-testers"
+  },
+  "vd809": {
+    "id": 5519,
+    "sku": "VD809",
+    "model": "VD809",
+    "category": "voltage-testers"
+  },
+  "vt811": {
+    "id": 4974,
+    "sku": "VT811",
+    "model": "VT811",
+    "category": "voltage-testers"
+  },
+  "vt812": {
+    "id": 4984,
+    "sku": "VT812",
+    "model": "VT812",
+    "category": "voltage-testers"
+  },
+  "wilk301": {
+    "id": 5936,
+    "sku": "wilk301",
+    "model": "WILK301",
+    "category": "others"
+  },
+  "wilk302": {
+    "id": 5830,
+    "sku": "wilk302",
+    "model": "WILK302",
+    "category": "others"
+  },
+  "wilk303": {
+    "id": 5840,
+    "sku": "wilk303",
+    "model": "WILK303",
+    "category": "others"
+  },
+  "wk316": {
+    "id": 7558,
+    "sku": "WK316",
+    "model": "WK316",
+    "category": "others"
+  },
+  "xl838l": {
+    "id": 5534,
+    "sku": "XL838L",
+    "model": "XL838L",
+    "category": "digital-multimeters"
+  },
+  "xt101": {
+    "id": 6011,
+    "sku": "XT101",
+    "model": "XT101",
+    "category": "others"
+  },
+  "xt266ft": {
+    "id": 4994,
+    "sku": "XT266FT",
+    "model": "XT266FT",
+    "category": "digital-clamp-meters"
+  },
+  "xt300": {
+    "id": 6004,
+    "sku": "XT300",
+    "model": "XT300",
+    "category": "others"
+  },
+  "xt802": {
+    "id": 5002,
+    "sku": "XT802",
+    "model": "XT802",
+    "category": "digital-multimeters"
+  },
+  "xt802 digital multimeter": {
+    "id": 7590,
+    "sku": "XT802 digital multimeter",
+    "model": "XT802",
+    "category": "digital-multimeters"
+  },
+  "xt803 digital multimeter": {
+    "id": 7601,
+    "sku": "XT803 digital multimeter",
+    "model": "XT803",
+    "category": "digital-multimeters"
+  }
+}

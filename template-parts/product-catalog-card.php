@@ -89,7 +89,7 @@ if ( ! $img_url && defined( 'EW_THEME_URI' ) ) {
   <p class="catalog-card__models"><?php echo esc_html( $sku_line ?: $title ); ?></p>
   <div class="catalog-card__actions">
    <a href="<?php echo esc_url( $perm ); ?>"><?php ew_esc_html_e( 'Learn More' ); ?> <span aria-hidden="true">↗</span></a>
-   <a class="catalog-card__inquiry" href="<?php echo esc_url( add_query_arg( 'inquiry_model', $sku_line ?: $title, $perm ) . '#inquiry' ); ?>"><?php ew_esc_html_e( 'Inquiry' ); ?></a>
+   <a class="catalog-card__inquiry" href="<?php echo esc_url( add_query_arg( 'inquiry_model', $sku_line ?: $title, ew_page_url( 'quote' ) ) . '#inquiry' ); ?>"><?php ew_esc_html_e( 'Inquiry' ); ?></a>
   </div>
  </div>
 </article>

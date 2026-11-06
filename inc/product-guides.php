@@ -25,28 +25,47 @@ if ( ! defined( 'ABSPATH' ) ) {
 function ew_product_guide_map() {
 	return array(
 		// 数字万用表
-		'a830l-series'  => array( 'a830l-digital-multimeter-guide' ),
-		'dt700-series'  => array( 'dt700-digital-multimeter-guide' ),
-		'dt830-series'  => array( 'dt830-digital-multimeter-guide' ),
-		'dt9205-series' => array( 'dt9205a-digital-multimeter-guide' ),
+		'156_a830l-digital-multimeter'  => array( 'a830l-digital-multimeter-guide', 'oem-private-label-multimeter', 'multimeter-packaging-and-manual-localization' ),
+		// 2026-10-30 批次 9：OEM 私标三连。DT830 是贴牌量最大的基型，两条都挂上去。
+		// 2026-10-30: 原键 'dt830d' 在库里不存在（/product/dt830d/ 301 到 -digital-multimeter 那个），
+		// 键写错导致这条 banner 从未渲染过。改用真实 slug。
+		'dt830d-digital-multimeter'  => array( 'dt830-digital-multimeter-guide', 'oem-private-label-multimeter', 'multimeter-sample-to-production-timeline' ),
+		'dt9205a' => array( 'dt9205a-digital-multimeter-guide', 'oem-private-label-multimeter', 'multimeter-packaging-and-manual-localization' ),
+		// 批次 4/5 的单品指南此前没有任何产品指向，长期停在 Discovered、lastCrawl 为空。
+		// 2026-10-23 补登记（每型号 ≤3 条，single-product.php 逐条渲染 banner）。
+		// 2026-11-02 批次 10：两篇读数解读文章。VC17B+ 产品页正文自带 True RMS 表述
+		// （实测 2 处 "true RMS" + 4 处 "true-RMS"），6000 计数也正是精度那篇的对照机型，
+		// 两条都挂在这里（合计 3 条，到顶不越线）。
+		'vc17-series'   => array( 'vc17-digital-multimeter-guide', 'multimeter-accuracy-percent-digits', 'true-rms-vs-average-responding-multimeter' ),
+		'vc9805' => array( 'vc9805-digital-multimeter-guide' ),
+		'154_st105-digital-multimeter'  => array( 'st105-digital-multimeter-guide' ),
+		// 批次 7（2026-10-22）：汽车电瓶三篇（怎么测 / 选哪个 / 启动压降）。
+		// 2026-10-23 起每型号把自家单品指南放第一位，让位给「启动压降」那篇
+		// （它仍由另两篇的 Related Guides 与分类页兜住），总数保持 3 条不越线。
+		'155_dt6222-digital-multimeter'            => array( 'dt6222-digital-multimeter-guide', 'multimeter-for-electricians', 'test-car-battery-with-multimeter' ),
+		// 2026-10-29 批次 6：《电工选表》直接对比 XT802 / DT6222，《价格构成》承接采购意图。
+		// 为守住每条目 ≤3 条，两条汽车电瓶让位（仍由 dt33c / dt6222 与文章级 Related Guides 兜住）。
+		'xt802' => array( 'xt802-digital-multimeter-guide', 'multimeter-for-electricians', 'multimeter-price-factory-vs-retail' ),
+		'dt33c'              => array( 'dt33-digital-multimeter-guide', 'test-car-battery-with-multimeter', 'multimeter-for-car-battery' ),
 		// 钳形表
-		'266-series'                     => array( '266-series-digital-clamp-meter', 'clamp-meter-how-to-use' ),
-		'xt266-series'                   => array( '266-series-digital-clamp-meter', 'clamp-meter-how-to-use' ),
-		'vc3268-series'                  => array( 'vc3268-digital-clamp-meter-guide', 'clamp-meter-how-to-use' ),
-		'vc3269-digital-clamp-meter'     => array( 'clamp-meter-how-to-use' ),
-		'vc3270-digital-clamp-meter'     => array( 'clamp-meter-how-to-use' ),
+		// 2026-10-30: 原键 '266c' 同样不存在，改真实 slug（钳形表合并后只剩 -digital-clamp-meter）。
+		'266c-digital-clamp-meter' => array( '266-series-digital-clamp-meter', 'clamp-meter-how-to-use', 'multimeter-sample-to-production-timeline' ),
+		'130_xt266-digital-clamp-meter'                   => array( '266-series-digital-clamp-meter', 'clamp-meter-how-to-use' ),
+		'vc3268'                  => array( 'vc3268-digital-clamp-meter-guide', 'clamp-meter-how-to-use' ),
+		'vc3269'     => array( 'clamp-meter-how-to-use' ),
+		'vc3270'     => array( 'clamp-meter-how-to-use' ),
 		// 电压测试笔
-		'88-2-series'      => array( '88-2-voltage-test-pen-guide' ),
+		'88-2-digital-voltage-tester'      => array( '88-2-voltage-test-pen-guide' ),
 		'6877-58-series'   => array( '6877-58-induction-voltage-tester-guide' ),
 		'6885-48-series'   => array( '6885-48-digital-voltage-tester-guide' ),
 		'1881-series'      => array( '1881-digital-inductive-voltage-tester' ),
 		'vd06-series'      => array( 'voltage-tester-vs-multimeter' ),
 		// 插座测试 / 温度 / 红外 / 电池
-		'socket-tester-series'       => array( 'outlet-tester-guide' ),
+		'socket-tester-series'       => array( 'outlet-tester-guide', 'gfi-vs-gfci' ),
 		'ht9269-multi-thermometer'   => array( 'ht9269-multi-channel-thermometer-guide' ),
 		'htc-2-temperature-meter'    => array( 'htc-2-temperature-humidity-meter-guide' ),
 		'gm320'                      => array( 'infrared-thermometer-guide' ),
-		'bt-168-series'              => array( 'battery-and-temperature-testers-guide' ),
+		'bt169'                      => array( 'battery-and-temperature-testers-guide' ),
 		'battery-meter-series'       => array( 'battery-and-temperature-testers-guide' ),
 		// 汽车电笔 → 汽车电气指南（主题匹配，非单品指南）
 		'hw170-series'   => array( 'automotive-electrical-testing-guide', 'multimeter-for-automotive-guide' ),
@@ -62,6 +81,42 @@ function ew_product_guide_map() {
 		'wilk302-series' => array( 'automotive-electrical-testing-guide' ),
 		'wilk303-series' => array( 'automotive-electrical-testing-guide' ),
 		'wilk301-series' => array( 'automotive-electrical-testing-guide' ),
+
+		// 2026-11-03 批次：35 个无出链产品补齐产品→指南（每型号 ≤3 条，仅 EN slug）
+		'266ft' => array( '266-series-digital-clamp-meter', 'how-to-choose-a-clamp-meter', 'clamp-meter-how-to-use' ),
+		'123_xt2017-digital-clamp-meter' => array( 'how-to-choose-a-clamp-meter', 'clamp-meter-how-to-use' ),
+		'138_dt3266l-digital-clamp-meter' => array( 'dt3266l-digital-clamp-meter-guide', 'clamp-meter-how-to-use' ),
+		'139_mt87-digital-clamp-meter' => array( 'how-to-choose-a-clamp-meter', 'clamp-meter-how-to-use' ),
+		'dm6266-series' => array( 'dm6266-digital-clamp-meter-guide', 'clamp-meter-how-to-use' ),
+		'dt266f-digital-clamp-meter' => array( 'clamp-meter-how-to-use', 'how-to-choose-a-clamp-meter' ),
+		'vc1210-digital-clamp-meter' => array( 'clamp-meter-how-to-use', 'how-to-choose-a-clamp-meter' ),
+		'vc3266l' => array( 'clamp-meter-how-to-use', 'clamp-meter-vs-digital-multimeter' ),
+		'dm101-series' => array( 'how-to-choose-a-digital-multimeter', 'multimeter-symbols-guide', 'how-to-use-a-multimeter' ),
+		'dm9205a-digital-multimeter' => array( 'dt9205a-digital-multimeter-guide', 'how-to-choose-a-digital-multimeter' ),
+		'148_vc890d-digital-multimeter' => array( 'vc890-digital-multimeter-guide', 'how-to-choose-a-digital-multimeter' ),
+		'149_vc9808-digital-multimeter' => array( 'multimeter-with-temperature-guide', 'how-to-test-a-capacitor-with-a-multimeter', 'how-to-choose-a-digital-multimeter' ),
+		'183_dt83b-digital-multimeter' => array( 'how-to-test-a-capacitor-with-a-multimeter', 'how-to-use-a-multimeter' ),
+		'194_dt850l-digital-multimeter' => array( 'how-to-use-a-multimeter', 'how-to-choose-a-digital-multimeter' ),
+		'dt182-digital-multimeter' => array( 'how-to-use-a-multimeter', 'multimeter-symbols-guide' ),
+		'dt700b-digital-multimeter' => array( 'dt700-digital-multimeter-guide', 'how-to-choose-a-digital-multimeter' ),
+		'dt700c-digital-multimeter' => array( 'dt700-digital-multimeter-guide', 'multimeter-with-temperature-guide' ),
+		'dt700d-digital-multimeter' => array( 'dt700-digital-multimeter-guide', 'how-to-use-a-multimeter' ),
+		'dt830l' => array( 'dt830-digital-multimeter-guide', 'how-to-use-a-multimeter' ),
+		'dt832' => array( 'how-to-use-a-multimeter', 'multimeter-symbols-guide' ),
+		'dt838' => array( 'multimeter-with-temperature-guide', 'how-to-choose-a-digital-multimeter' ),
+		'dt9208a' => array( 'dt9208a-digital-multimeter-guide', 'multimeter-with-temperature-guide' ),
+		'mas838l' => array( 'multimeter-with-temperature-guide', 'how-to-use-a-multimeter' ),
+		'my62' => array( 'multimeter-with-temperature-guide', 'how-to-choose-a-digital-multimeter' ),
+		'my64-digital-multimeter' => array( 'multimeter-with-temperature-guide', 'how-to-test-a-capacitor-with-a-multimeter', 'multimeter-symbols-guide' ),
+		'12-voltage-tester' => array( 'voltage-testers-guide-types-and-safety', 'how-to-test-a-voltage-tester' ),
+		'130605-series' => array( 'voltage-testers-guide-types-and-safety', 'test-light-switch-with-voltage-tester' ),
+		'130855-digital-light-voltage-tester' => array( 'voltage-tester-number-meaning', 'how-to-test-a-voltage-tester' ),
+		'177_1ac-d-voltage-tester' => array( 'voltage-tester-vs-multimeter', 'voltage-testers-guide-types-and-safety' ),
+		'190_m200-pen-type-voltage-tester' => array( 'voltage-testers-guide-types-and-safety', 'voltage-tester-vs-multimeter' ),
+		'm100-voltage-tester' => array( 'voltage-testers-guide-types-and-safety', 'how-to-test-a-voltage-tester' ),
+		'vd02-series' => array( 'why-non-contact-voltage-tester-beeps-on-dead-wire', 'voltage-tester-vs-multimeter' ),
+		'vd10-series' => array( 'voltage-testers-guide-types-and-safety', 'voltage-tester-number-meaning' ),
+		'sg8001-series' => array( 'why-non-contact-voltage-tester-beeps-on-dead-wire', 'home-wiring-safety-socket-tester' ),
 	);
 }
 

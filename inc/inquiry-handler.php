@@ -19,23 +19,27 @@ add_action( 'wp_ajax_nopriv_ew_submit_inquiry', 'ew_handle_inquiry' );
 
 function ew_handle_inquiry() {
 
-    // Verify nonce
-    if ( ! wp_verify_nonce( $_POST['nonce'], 'ew_inquiry_nonce' ) ) {
-        wp_send_json_error( array( 'message' => ew__('Security check failed. Please refresh the page.') ) );
+    // 2026-11-05「宁放过不错杀」：会整条吃掉询盘的校验全部降级为只记日志。
+    // nonce —— fastcgi 缓存下的页面可能带着过期 nonce，真访客只会看到「请刷新」然后走掉。
+    if ( ! wp_verify_nonce( isset( $_POST['nonce'] ) ? $_POST['nonce'] : '', 'ew_inquiry_nonce' ) ) {
+        error_log( '[ew-inquiry] nonce failed, accepted anyway | IP ' . ( isset( $_SERVER['REMOTE_ADDR'] ) ? $_SERVER['REMOTE_ADDR'] : 'n/a' ) );
     }
 
-    // 人机验证：未通过就明确报错让真人重试，区别于下面的静默丢弃。
+    // Turnstile —— 已在 2026-11-05 关闭（CHINYOO_TURNSTILE_ENABLED = false）。
+    // 恢复时：把上面那两行 error_log 各自换回 wp_send_json_error，并将常量改回 true。
     $ew_ts_token = isset( $_POST['cf-turnstile-response'] ) ? sanitize_text_field( wp_unslash( $_POST['cf-turnstile-response'] ) ) : '';
     $ew_ts_ip    = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
     if ( ! ew_turnstile_verify( $ew_ts_token, $ew_ts_ip ) ) {
-        wp_send_json_error( array( 'message' => ew__('Human verification failed. Please complete it and try again.') ) );
+        error_log( '[ew-inquiry] turnstile failed, accepted anyway | IP ' . $ew_ts_ip );
     }
 
     // 防垃圾询盘：蜜罐 / 频率限制 / 内容过滤。命中则静默丢弃——
     // 返回与成功一致的消息，但不创建询盘、不发邮件、不推钉钉（不告诉机器人它被拦了）。
     if ( ew_inquiry_is_spam( $_POST ) ) {
+        // recorded=false：静默丢弃的垃圾询盘，前端据此不打 GA4 转化事件。
         wp_send_json_success( array(
-            'message' => ew__('Thank you! We have received your inquiry and will get back to you within 24 hours.'),
+            'message'  => ew__('Thank you! We have received your inquiry and will get back to you within 24 hours.'),
+            'recorded' => false,
         ) );
     }
 
@@ -51,7 +55,8 @@ function ew_handle_inquiry() {
     $message = sanitize_textarea_field( $_POST['inquiry_message'] );
 
     // Validate required fields
-    if ( empty( $name ) || empty( $email ) || empty( $phone ) || empty( $message ) ) {
+    // 电话号码选填（2026-11-05）：只留邮箱的真实买家也算有效询盘。
+    if ( empty( $name ) || empty( $email ) || empty( $message ) ) {
         wp_send_json_error( array( 'message' => ew__('Please fill in all required fields.') ) );
     }
 
@@ -98,9 +103,9 @@ function ew_handle_inquiry() {
     wp_mail( $admin_email, $subject, $email_body );
 
     // Send auto-reply to customer
-    $auto_reply_subject = ew__('Thank you for your inquiry — Wenzhou Zhengyuan Electronics Co., Ltd.');
+    $auto_reply_subject = ew__('Thank you for your inquiry — Wenzhou Zhengyuan Electronic Co., Ltd.');
     $auto_reply_body = sprintf(
-        "Dear %s,\n\nThank you for your inquiry. We have received your message and will get back to you within 24 hours.\n\nBest regards,\nWenzhou Zhengyuan Electronics Co., Ltd.",
+        "Dear %s,\n\nThank you for your inquiry. We have received your message and will get back to you within 24 hours.\n\nBest regards,\nWenzhou Zhengyuan Electronic Co., Ltd.",
         $name
     );
     wp_mail( $email, $auto_reply_subject, $auto_reply_body );
@@ -110,7 +115,9 @@ function ew_handle_inquiry() {
     error_log( '[ew-inquiry] DingTalk push fired for #' . $inquiry_id );
 
     wp_send_json_success( array(
-        'message' => ew__('Thank you! We have received your inquiry and will get back to you within 24 hours.'),
+        'message'    => ew__('Thank you! We have received your inquiry and will get back to you within 24 hours.'),
+        'recorded'   => true,
+        'inquiry_id' => (int) $inquiry_id,
     ) );
 }
 

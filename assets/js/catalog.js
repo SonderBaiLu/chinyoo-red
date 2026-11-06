@@ -4,13 +4,6 @@
         var shell = document.querySelector('.catalog-shell');
         if (!shell) return;
         var header = document.querySelector('.site-header');
-        var navigation = shell.querySelector('.catalog-navigation');
-        var smallScreen = window.matchMedia('(max-width: 1023px)');
-        function setNavigation() {
-            if (navigation) navigation.open = !smallScreen.matches;
-        }
-        setNavigation();
-        smallScreen.addEventListener('change', setNavigation);
         function setHeaderHeight() {
             if (header) shell.style.setProperty('--catalog-header-height', Math.ceil(header.getBoundingClientRect().height) + 'px');
         }

@@ -115,6 +115,64 @@ function ew_get_model_detail_images( $model_id ) {
 }
 }
 
+/**
+ * Product Details 的固定三图：白底图 / 商品详细信息图 / 使用场景图。
+ * _model_detail_extras 存 {"white":[id],"scene":[id]}；翻译页回退到 EN 源 post。
+ *
+ * @param int $model_id Variation ID or post ID.
+ * @return array{white:int,scene:int[]}
+ */
+if ( ! function_exists( 'ew_get_model_detail_extras' ) ) {
+function ew_get_model_detail_extras( $model_id ) {
+    $pid = absint( $model_id );
+    if ( ! $pid ) {
+        return array( 'white' => 0, 'scene' => array() );
+    }
+
+    $raw = get_post_meta( $pid, '_model_detail_extras', true );
+    $map = is_string( $raw ) ? json_decode( $raw, true ) : $raw;
+
+    if ( ! is_array( $map ) || empty( $map ) ) {
+        if ( function_exists( 'pll_get_post' ) && function_exists( 'pll_default_language' ) ) {
+            $en = (int) pll_get_post( $pid, pll_default_language() );
+            if ( $en && $en !== $pid ) {
+                $raw = get_post_meta( $en, '_model_detail_extras', true );
+                $map = is_string( $raw ) ? json_decode( $raw, true ) : $raw;
+            }
+        }
+    }
+    if ( ! is_array( $map ) ) {
+        $map = array();
+    }
+
+    $white = isset( $map['white'] ) ? ( is_array( $map['white'] ) ? reset( $map['white'] ) : $map['white'] ) : 0;
+    $scene = isset( $map['scene'] ) ? (array) $map['scene'] : array();
+
+    return array(
+        'white' => absint( $white ),
+        'scene' => array_values( array_filter( array_map( 'absint', $scene ) ) ),
+    );
+}
+}
+
+/** Use the source product SKU on translated pages that have no duplicate WooCommerce SKU. */
+if ( ! function_exists( 'ew_product_display_sku' ) ) {
+function ew_product_display_sku( $product ) {
+    $sku = (string) $product->get_sku();
+    if ( '' !== $sku || ! function_exists( 'pll_get_post' ) || ! function_exists( 'pll_default_language' ) ) {
+        return $sku;
+    }
+    $source_id = (int) pll_get_post( $product->get_id(), pll_default_language() );
+    if ( $source_id && $source_id !== $product->get_id() ) {
+        $source = wc_get_product( $source_id );
+        if ( $source instanceof WC_Product ) {
+            return (string) $source->get_sku();
+        }
+    }
+    return $sku;
+}
+}
+
 get_header();
 
 while ( have_posts() ) :
@@ -188,14 +246,16 @@ while ( have_posts() ) :
             );
         }
     } else {
-        $pid       = $product->get_id();
-        $sku       = $product->get_sku() ? (string) $product->get_sku() : '';
-        $url_model = '' !== $sku ? $sku : $product->get_slug();
+        $pid        = $product->get_id();
+        $sku        = ew_product_display_sku( $product );
+        $url_model  = '' !== $sku ? $sku : $product->get_slug();
+        $model_meta = (string) get_post_meta( $pid, 'product_model', true );
+        $label      = '' !== $model_meta ? $model_meta : ( '' !== $sku ? $sku : $url_model );
 
         $models[] = array(
             'id'        => $pid,
             'sku'       => $sku,
-            'label'     => '' !== $sku ? $sku : $url_model,
+            'label'     => $label,
             'url_model' => $url_model,
             'specs'     => ew_get_model_specs( $pid ),
             'gallery'   => ew_get_model_gallery( $pid ),
@@ -205,14 +265,16 @@ while ( have_posts() ) :
 
     // Defensive: if no model could be derived, fall back to the parent product.
     if ( empty( $models ) ) {
-        $pid       = $product->get_id();
-        $sku       = $product->get_sku() ? (string) $product->get_sku() : '';
-        $url_model = '' !== $sku ? $sku : $product->get_slug();
+        $pid        = $product->get_id();
+        $sku        = ew_product_display_sku( $product );
+        $url_model  = '' !== $sku ? $sku : $product->get_slug();
+        $model_meta = (string) get_post_meta( $pid, 'product_model', true );
+        $label      = '' !== $model_meta ? $model_meta : ( '' !== $sku ? $sku : $product->get_name() );
 
         $models[] = array(
             'id'        => $pid,
             'sku'       => $sku,
-            'label'     => '' !== $sku ? $sku : $product->get_name(),
+            'label'     => $label,
             'url_model' => $url_model,
             'specs'     => ew_get_model_specs( $pid ),
             'gallery'   => ew_get_model_gallery( $pid ),
@@ -301,14 +363,29 @@ while ( have_posts() ) :
      * 6. Display values.
      * -------------------------------------------------------------------- */
     $series_title      = (string) $product->get_name();
+    $information_series = $series_title;
+    if ( ! $product->is_type( 'variable' ) ) {
+        // A simple product is a model, not a series. Show its most specific
+        // assigned product category instead of repeating the model and SKU.
+        $information_series = '';
+        $series_terms = get_the_terms( $product->get_id(), 'product_cat' );
+        if ( is_array( $series_terms ) && ! is_wp_error( $series_terms ) ) {
+            $deepest_depth = -1;
+            foreach ( $series_terms as $series_term ) {
+                if ( 'uncategorized' === $series_term->slug ) {
+                    continue;
+                }
+                $depth = count( get_ancestors( $series_term->term_id, 'product_cat', 'taxonomy' ) );
+                if ( $depth > $deepest_depth ) {
+                    $deepest_depth = $depth;
+                    $information_series = $series_term->name;
+                }
+            }
+        }
+    }
     $short_description = (string) $product->get_short_description();
     $packaging         = isset( $current_model['packaging'] ) ? (string) $current_model['packaging'] : '';
     $current_sku       = '' !== $current_model['sku'] ? $current_model['sku'] : $current_model['label'];
-
-    $inquiry_product_name = $series_title;
-    if ( '' !== $current_model['label'] ) {
-        $inquiry_product_name .= ' (' . $current_model['label'] . ')';
-    }
     ?>
 
     <div class="container">
@@ -487,7 +564,8 @@ while ( have_posts() ) :
                 <?php endif; ?>
 
                 <div class="product-summary__actions">
-                    <a href="#inquiry" class="btn btn--inquiry btn--lg js-inquiry-cta"
+                    <a href="<?php echo esc_url( add_query_arg( 'inquiry_model', $current_sku, ew_page_url( 'quote' ) ) . '#inquiry' ); ?>"
+                       class="btn btn--inquiry btn--lg js-inquiry-cta"
                        data-model="<?php echo esc_attr( $current_sku ); ?>">
                         <?php ew_esc_html_e('Get a Quote'); ?>
                     </a>
@@ -562,7 +640,7 @@ while ( have_posts() ) :
             <div class="product-tab__panel" id="tab-Information" role="tabpanel" aria-labelledby="Information">
                 <h2 class="tab-panel-title"><?php ew_esc_html_e('Product Information'); ?></h2>
                 <dl class="product-information">
-                    <div><dt><?php ew_esc_html_e('Series'); ?></dt><dd><?php echo esc_html( $series_title ); ?></dd></div>
+                    <?php if ( '' !== $information_series ) : ?><div><dt><?php ew_esc_html_e('Series'); ?></dt><dd><?php echo esc_html( $information_series ); ?></dd></div><?php endif; ?>
                     <div><dt><?php ew_esc_html_e('Model'); ?></dt><dd><?php echo esc_html( $current_model['label'] ); ?></dd></div>
                     <div><dt><?php ew_esc_html_e('SKU'); ?></dt><dd><?php echo esc_html( $current_sku ); ?></dd></div>
                     <?php foreach ( $highlights as $highlight ) : ?><div><dt><?php echo esc_html( $highlight['name'] ); ?></dt><dd><?php echo esc_html( $highlight['value'] ); ?></dd></div><?php endforeach; ?>
@@ -650,23 +728,61 @@ while ( have_posts() ) :
 
         <?php
         /* --------------------------------------------------------------------
-         * Product Details — 实拍/详情长图(inc. _model_detail_images)。
-         * 中文页取 'cn' 图,其余语言回退 'en';无图不渲染区块。
+         * Product Details 固定三图：白底图 → 商品详细信息图 → 使用场景图。
+         * 白底/场景来自 _model_detail_extras，详情图来自 _model_detail_images。
+         * 老数据没有 extras 时，白底回退主图、场景回退画廊第 2 张。
          * -------------------------------------------------------------------- */
-        $ew_detail_ids = ew_get_model_detail_images( (int) $current_model['id'] );
-        if ( ! empty( $ew_detail_ids ) ) :
+        $ew_detail_ids   = ew_get_model_detail_images( (int) $current_model['id'] );
+        $ew_detail_extra = ew_get_model_detail_extras( (int) $current_model['id'] );
+        $ew_gallery_ids  = ! empty( $current_model['gallery'] ) ? array_values( array_filter( array_map( 'absint', $current_model['gallery'] ) ) ) : array();
+
+        $ew_white_id = (int) $ew_detail_extra['white'];
+        if ( ! $ew_white_id && ! empty( $ew_gallery_ids ) ) {
+            $ew_white_id = (int) $ew_gallery_ids[0];
+        }
+
+        $ew_scene_ids = (array) $ew_detail_extra['scene'];
+        if ( empty( $ew_scene_ids ) && ! empty( $ew_detail_ids ) && count( $ew_gallery_ids ) > 1 ) {
+            $ew_scene_ids = array( (int) $ew_gallery_ids[1] );
+        }
+
+        $ew_detail_blocks = array();
+        if ( $ew_white_id ) { $ew_detail_blocks[] = array( 'id' => $ew_white_id, 'type' => 'white' ); }
+        foreach ( $ew_detail_ids as $ew_did ) { $ew_detail_blocks[] = array( 'id' => (int) $ew_did, 'type' => 'info' ); }
+        foreach ( $ew_scene_ids as $ew_sid ) { $ew_detail_blocks[] = array( 'id' => (int) $ew_sid, 'type' => 'scene' ); }
+
+        // 去重，避免老数据里同一张图重复出现
+        $ew_seen = array();
+        $ew_blocks = array();
+        foreach ( $ew_detail_blocks as $ew_block ) {
+            if ( ! $ew_block['id'] || isset( $ew_seen[ $ew_block['id'] ] ) ) { continue; }
+            $ew_seen[ $ew_block['id'] ] = true;
+            $ew_blocks[] = $ew_block;
+        }
+
+        $ew_show_details = ! empty( $ew_blocks ) && ( ! empty( $ew_detail_ids ) || ! empty( $ew_detail_extra['white'] ) || ! empty( $ew_detail_extra['scene'] ) );
+        if ( $ew_show_details ) :
+            $ew_detail_labels = array(
+                'white' => ew_esc_html__( 'White background' ),
+                'info'  => ew_esc_html__( 'Product details' ),
+                'scene' => ew_esc_html__( 'Application scenario' ),
+            );
             ?>
             <section class="product-details" data-animation-wrap>
                 <h2 class="section-title" data-animation="1"><?php ew_esc_html_e('Product Details'); ?></h2>
                 <div class="product-details__list">
-                    <?php foreach ( $ew_detail_ids as $ew_did ) : ?>
-                        <div class="product-details__item">
+                    <?php foreach ( $ew_blocks as $ew_block ) : ?>
+                        <div class="product-details__item product-details__item--<?php echo esc_attr( $ew_block['type'] ); ?>">
                             <?php
                             echo wp_get_attachment_image(
-                                (int) $ew_did,
+                                (int) $ew_block['id'],
                                 'full',
                                 false,
-                                array( 'loading' => 'lazy', 'decoding' => 'async' )
+                                array(
+                                    'loading'  => 'lazy',
+                                    'decoding' => 'async',
+                                    'alt'      => $current_model['label'] . ' - ' . $ew_detail_labels[ $ew_block['type'] ],
+                                )
                             );
                             ?>
                         </div>
@@ -674,15 +790,6 @@ while ( have_posts() ) :
                 </div>
             </section>
         <?php endif; ?>
-
-        <section class="product-inquiry-section product-inquiry-section--full" id="inquiry">
-            <div class="product-inquiry-section__intro">
-                <p class="product-inquiry-section__eyebrow"><?php ew_esc_html_e( 'Factory Direct' ); ?></p>
-                <h2><?php ew_esc_html_e( 'Request a Quote for This Model' ); ?></h2>
-                <p><?php ew_esc_html_e( 'Tell us your quantity, market and product requirements. Our team will respond within 24 hours.' ); ?></p>
-            </div>
-            <?php get_template_part( 'template-parts/inquiry-form', null, array( 'product_name' => $inquiry_product_name ) ); ?>
-        </section>
 
         <?php
         /* --------------------------------------------------------------------
@@ -692,10 +799,11 @@ while ( have_posts() ) :
          * -------------------------------------------------------------------- */
         $ew_faq_key  = ew_geo_faq_for_product( $product->get_id() );
         $ew_faq_list = ew_geo_faq( $ew_faq_key );
-        // 每个产品页都附加通用采购问答(起订量/OEM/认证/质保/物流/付款/样品/出口单证)，
-        // 分类命中时避免重复渲染 general(分类=general 时不再追加)。
+        // 2026-11-03 去重：原先每个产品页都把 8 条 general 问答整块追加，导致约 127 个
+        // 产品页（及 5 种语言）出现完全相同的问答块。分类问答已覆盖认证/质保/物流/付款/
+        // 出口单证，产品页只保留 3 条通用采购问题：起订量、OEM/ODM、样品。
         if ( 'general' !== $ew_faq_key ) {
-            $ew_faq_list = array_merge( $ew_faq_list, ew_geo_faq( 'general' ) );
+            $ew_faq_list = array_merge( $ew_faq_list, ew_geo_faq_pick( 'general', array( 'g1', 'g2', 'g7' ) ) );
         }
         if ( ! empty( $ew_faq_list ) ) :
             $ew_faq_i = 0;
@@ -736,6 +844,65 @@ while ( have_posts() ) :
             ?>
             </script>
         <?php endif; ?>
+
+        <?php
+        /* --------------------------------------------------------------------
+         * Product 结构化数据。
+         *
+         * 站上不公开价格（B2B 报价制），因此不输出 offers —— 没有 price 的 Offer
+         * 既不合格也不诚实。这里只声明产品实体本身：名称带 " - CHINYOO" 后缀、
+         * 描述、图片、SKU、品牌与制造商。
+         * -------------------------------------------------------------------- */
+        $ew_pid = $product->get_id();
+        if ( $ew_pid ) {
+            $ew_p_image = (string) get_the_post_thumbnail_url( $ew_pid, 'full' );
+            $ew_p_desc  = trim( wp_strip_all_tags( (string) get_post_field( 'post_excerpt', $ew_pid, 'raw' ) ) );
+            if ( '' === $ew_p_desc ) {
+                $ew_p_desc = (string) get_post_meta( $ew_pid, 'rank_math_description', true );
+            }
+            if ( '' === $ew_p_desc ) {
+                $ew_p_desc = wp_trim_words( wp_strip_all_tags( (string) get_post_field( 'post_content', $ew_pid ) ), 40 );
+            }
+            // _sku 在个别老产品里被填成了标题（如 VC1210 的 sku 是 "VC1210 digital clamp meter"），
+            // 优先用 product_model，再退回 sku。
+            $ew_p_sku = (string) get_post_meta( $ew_pid, 'product_model', true );
+            if ( '' === $ew_p_sku ) {
+                $ew_p_sku = (string) $product->get_sku();
+            }
+            $ew_p_cat = '';
+            $ew_p_terms = get_the_terms( $ew_pid, 'product_cat' );
+            if ( is_array( $ew_p_terms ) && ! is_wp_error( $ew_p_terms ) ) {
+                $ew_p_cat = $ew_p_terms[0]->name;
+            }
+            $ew_p_ld = array(
+                '@context'     => 'https://schema.org',
+                '@type'        => 'Product',
+                '@id'          => get_permalink( $ew_pid ) . '#product',
+                'name'         => get_the_title( $ew_pid ) . ' - CHINYOO',
+                'url'          => get_permalink( $ew_pid ),
+                'description'  => $ew_p_desc,
+                'brand'        => array( '@type' => 'Brand', 'name' => 'CHINYOO' ),
+                'manufacturer' => array(
+                    '@type' => 'Organization',
+                    'name'  => 'Wenzhou Zhengyuan Electronic Co., Ltd.',
+                    'url'   => 'https://www.chinyoo.com/',
+                ),
+            );
+            if ( '' !== $ew_p_image ) {
+                $ew_p_ld['image'] = $ew_p_image;
+            }
+            if ( '' !== $ew_p_sku ) {
+                $ew_p_ld['sku'] = $ew_p_sku;
+                $ew_p_ld['mpn'] = $ew_p_sku;
+            }
+            if ( '' !== $ew_p_cat ) {
+                $ew_p_ld['category'] = $ew_p_cat;
+            }
+            echo "\n<script type=\"application/ld+json\">"
+                . wp_json_encode( $ew_p_ld, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES )
+                . "</script>\n";
+        }
+        ?>
 
         <?php
         /* --------------------------------------------------------------------

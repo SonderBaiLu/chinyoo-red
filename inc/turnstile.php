@@ -9,6 +9,12 @@ define( 'EW_TURNSTILE_SITE_KEY', defined( 'CHINYOO_TURNSTILE_SITE_KEY' ) ? CHINY
 
 // wp-config.php 没配保密密钥时视为未启用：本地环境、临时关闭都走这条。
 function ew_turnstile_enabled() {
+    // 2026-11-05「宁放过不错杀」：Turnstile 在部分浏览器里拿不到 token，
+    // 空 token 会被直接拒绝且不留痕迹，询盘整条消失。总开关放 wp-config/mu-plugin 里。
+    if ( defined( 'CHINYOO_TURNSTILE_ENABLED' ) && ! CHINYOO_TURNSTILE_ENABLED ) {
+        return false;
+    }
+
     return defined( 'CHINYOO_TURNSTILE_SECRET' ) && '' !== CHINYOO_TURNSTILE_SECRET;
 }
 

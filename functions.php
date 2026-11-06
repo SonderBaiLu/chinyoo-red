@@ -342,7 +342,7 @@ add_filter( 'pre_get_document_title', function ( $title ) {
 		}
 	} elseif ( is_front_page() && ! is_admin() ) {
 		// EN 首页：短标题（原 Rank Math 模板 75 字符，SERP 截断）。
-		return 'CHINYOO — Electrical Measuring Instruments Manufacturer';
+		return 'CHINYOO — Multimeter, Voltage Tester & Clamp Meter Manufacturer';
 	}
 	return $title;
 }, 40 );
@@ -451,7 +451,8 @@ add_action( 'wp_head', function () {
 		'@id'             => $home . '#website',
 		'url'             => $home,
 		'name'            => get_bloginfo( 'name' ),
-		'alternateName'   => 'Electrical World',
+		// 不设 alternateName：'Electrical World' 是早期品牌，在 llms.txt 里以
+		// 「formerly branded」的曾用名写法出现，与 schema 的「现用别名」语义不同。
 		'description'     => 'Professional test & measurement instrument manufacturer in Wenzhou, China — digital multimeters, clamp meters, voltage testers, and battery testers.',
 		'publisher'       => array( '@id' => $ew_ws_home . '#organization' ),
 		'inLanguage'      => ew_schema_lang(),
@@ -1032,7 +1033,36 @@ function ew_build_mega_tree() {
             }
             $panels_html .= '</ul>';
         } else {
-            $panels_html .= '<p class="c-mega-empty">' . ew_esc_html__( 'Series data updating...' ) . '</p>';
+            // 顶层分类下没有可见子分类时（如 Clamp Meters —— 其唯一子分类 digital-clamp-meters
+            // 已合并 301 到父级并被本文件排除），直接列该分类下的系列/产品页，
+            // 避免下拉面板出现 "Series data updating..." 死状态。
+            $fallback_items = get_posts( array(
+                'post_type'        => 'product',
+                'post_status'      => 'publish',
+                'posts_per_page'   => 24,
+                'orderby'          => 'menu_order title',
+                'order'            => 'ASC',
+                'tax_query'        => array( array(
+                    'taxonomy' => 'product_cat',
+                    'field'    => 'term_id',
+                    'terms'    => (int) $cat->term_id,
+                ) ),
+                'suppress_filters' => false,
+            ) );
+
+            if ( ! empty( $fallback_items ) ) {
+                $panels_html .= '<ul class="c-mega-subgrid">';
+                foreach ( $fallback_items as $fp ) {
+                    $panels_html .= sprintf(
+                        '<li><a href="%s" class="c-mega-sublink">%s</a></li>',
+                        esc_url( get_permalink( $fp ) ),
+                        esc_html( get_the_title( $fp ) )
+                    );
+                }
+                $panels_html .= '</ul>';
+            } else {
+                $panels_html .= '<p class="c-mega-empty">' . ew_esc_html__( 'Series data updating...' ) . '</p>';
+            }
         }
         $panels_html .= '</div>';
     }
@@ -1102,17 +1132,17 @@ function ew_author_profiles() {
             'role_short'  => array( 'zh' => '创始人', 'en' => 'Founder', 'es' => 'Fundador', 'ru' => 'Основатель', 'ar' => 'مؤسس' ),
             'role'        => array(
                 'zh' => '温州正原电子创始人',
-                'en' => 'Founder, Wenzhou Zhengyuan Electronics',
-                'es' => 'Fundador de Wenzhou Zhengyuan Electronics',
-                'ru' => 'Основатель Wenzhou Zhengyuan Electronics',
-                'ar' => 'مؤسس Wenzhou Zhengyuan Electronics',
+                'en' => 'Founder, Wenzhou Zhengyuan Electronic',
+                'es' => 'Fundador de Wenzhou Zhengyuan Electronic',
+                'ru' => 'Основатель Wenzhou Zhengyuan Electronic',
+                'ar' => 'مؤسس Wenzhou Zhengyuan Electronic',
             ),
             'bio'         => array(
-                'en' => 'Founder of Wenzhou Zhengyuan Electronics, the factory behind the CHINYOO brand of digital multimeters, clamp meters, voltage testers and battery meters. He writes from hands-on factory experience to help buyers and electrical professionals choose instruments they can rely on.',
+                'en' => 'Founder of Wenzhou Zhengyuan Electronic, the factory behind the CHINYOO brand of digital multimeters, clamp meters, voltage testers and battery meters. He writes from hands-on factory experience to help buyers and electrical professionals choose instruments they can rely on.',
                 'zh' => '温州正原电子创始人，CHINYOO 品牌数字万用表、钳形表、电压测试仪和电池测试仪的生产工厂。他以一线工厂经验撰写内容，帮助采购方与电气从业者挑选值得信赖的仪器。',
-                'es' => 'Fundador de Wenzhou Zhengyuan Electronics, la fábrica detrás de la marca CHINYOO de multímetros digitales, pinzas amperimétricas, detectores de voltaje y medidores de batería. Escribe desde la experiencia directa de fábrica para ayudar a compradores y profesionales eléctricos a elegir instrumentos fiables.',
-                'ru' => 'Основатель Wenzhou Zhengyuan Electronics — фабрики, выпускающей под брендом CHINYOO мультиметры, токовые клещи, тестеры напряжения и измерители аккумуляторов. Пишет на основе опыта производства, помогая покупателям и электромонтажникам выбирать надёжные приборы.',
-                'ar' => 'مؤسس Wenzhou Zhengyuan Electronics، الشركة المصنعة وراء علامة CHINYOO التجارية لأجهزة القياس الرقمية المتعددة ومقاييس المشبك وأجهزة اختبار الجهد وأجهزة قياس البطارية. يكتب من خبرته المباشرة في المصنع لمساعدة المشترين ومتخصصي الكهرباء على اختيار أجهزة يعتمدون عليها.',
+                'es' => 'Fundador de Wenzhou Zhengyuan Electronic, la fábrica detrás de la marca CHINYOO de multímetros digitales, pinzas amperimétricas, detectores de voltaje y medidores de batería. Escribe desde la experiencia directa de fábrica para ayudar a compradores y profesionales eléctricos a elegir instrumentos fiables.',
+                'ru' => 'Основатель Wenzhou Zhengyuan Electronic — фабрики, выпускающей под брендом CHINYOO мультиметры, токовые клещи, тестеры напряжения и измерители аккумуляторов. Пишет на основе опыта производства, помогая покупателям и электромонтажникам выбирать надёжные приборы.',
+                'ar' => 'مؤسس Wenzhou Zhengyuan Electronic، الشركة المصنعة وراء علامة CHINYOO التجارية لأجهزة القياس الرقمية المتعددة ومقاييس المشبك وأجهزة اختبار الجهد وأجهزة قياس البطارية. يكتب من خبرته المباشرة في المصنع لمساعدة المشترين ومتخصصي الكهرباء على اختيار أجهزة يعتمدون عليها.',
             ),
         ),
         'daijiewei' => array( // 戴杰伟 / Dai Jiewei(工程师)
@@ -1121,17 +1151,17 @@ function ew_author_profiles() {
             'role_short'  => array( 'zh' => '工程师', 'en' => 'Engineer', 'es' => 'Ingeniero', 'ru' => 'Инженер', 'ar' => 'مهندس' ),
             'role'        => array(
                 'zh' => '温州正原电子工程师',
-                'en' => 'Engineer, Wenzhou Zhengyuan Electronics',
-                'es' => 'Ingeniero de Wenzhou Zhengyuan Electronics',
-                'ru' => 'Инженер Wenzhou Zhengyuan Electronics',
-                'ar' => 'مهندس في Wenzhou Zhengyuan Electronics',
+                'en' => 'Engineer, Wenzhou Zhengyuan Electronic',
+                'es' => 'Ingeniero de Wenzhou Zhengyuan Electronic',
+                'ru' => 'Инженер Wenzhou Zhengyuan Electronic',
+                'ar' => 'مهندس في Wenzhou Zhengyuan Electronic',
             ),
             'bio'         => array(
-                'en' => 'Dai is an engineer at Wenzhou Zhengyuan Electronics. He tests and validates every CHINYOO instrument before it ships, and also works directly with overseas customers to help them spec the right product. He writes technical guides from hands-on workbench experience so buyers can match the right meter to the job.',
+                'en' => 'Dai is an engineer at Wenzhou Zhengyuan Electronic. He tests and validates every CHINYOO instrument before it ships, and also works directly with overseas customers to help them spec the right product. He writes technical guides from hands-on workbench experience so buyers can match the right meter to the job.',
                 'zh' => '戴杰伟是温州正原电子工程师，负责 CHINYOO 每款仪表出厂前的测试与验证，同时直接对接海外客户，协助选型与采购。他以一线测试经验撰写技术指南，帮助采购方为实际工况选对仪表。',
-                'es' => 'Dai es ingeniero de Wenzhou Zhengyuan Electronics. Prueba y valida cada instrumento CHINYOO antes de su envío y atiende directamente a clientes en el extranjero para ayudarles a elegir el producto adecuado. También escribe guías técnicas desde su experiencia en el banco de pruebas para que los compradores elijan el medidor correcto para cada trabajo.',
-                'ru' => 'Дай — инженер Wenzhou Zhengyuan Electronics. Он тестирует и проверяет каждый прибор CHINYOO перед отправкой, а также напрямую работает с зарубежными клиентами, помогая подобрать нужную продукцию. Пишет технические руководства на основе практического опыта, чтобы покупатели выбирали правильный прибор для каждой задачи.',
-                'ar' => 'داي مهندس في Wenzhou Zhengyuan Electronics. يختبر ويتحقق من كل جهاز CHINYOO قبل شحنه، ويعمل مباشرة مع العملاء الخارجيين لمساعدتهم على اختيار المنتج المناسب. يكتب أدلة تقنية مستندة إلى خبرته العملية في المختبر ليختار المشترون الجهاز المناسب لكل مهمة.',
+                'es' => 'Dai es ingeniero de Wenzhou Zhengyuan Electronic. Prueba y valida cada instrumento CHINYOO antes de su envío y atiende directamente a clientes en el extranjero para ayudarles a elegir el producto adecuado. También escribe guías técnicas desde su experiencia en el banco de pruebas para que los compradores elijan el medidor correcto para cada trabajo.',
+                'ru' => 'Дай — инженер Wenzhou Zhengyuan Electronic. Он тестирует и проверяет каждый прибор CHINYOO перед отправкой, а также напрямую работает с зарубежными клиентами, помогая подобрать нужную продукцию. Пишет технические руководства на основе практического опыта, чтобы покупатели выбирали правильный прибор для каждой задачи.',
+                'ar' => 'داي مهندس في Wenzhou Zhengyuan Electronic. يختبر ويتحقق من كل جهاز CHINYOO قبل شحنه، ويعمل مباشرة مع العملاء الخارجيين لمساعدتهم على اختيار المنتج المناسب. يكتب أدلة تقنية مستندة إلى خبرته العملية في المختبر ليختار المشترون الجهاز المناسب لكل مهمة.',
             ),
         ),
     );
@@ -1188,4 +1218,71 @@ function ew_author_by_label() {
     );
     $lang = ew_author_lang();
     return isset( $map[ $lang ] ) ? $map[ $lang ] : $map['en'];
+}
+
+/**
+ * 2026-10-28 抓取预算整理（zz）
+ *
+ * 1) /downloads/<slug>/ 68 个文档详情页没有 single-download.php，落到文章模板回退：
+ *    面包屑写着 Home / News、带作者框、正文里连一个 PDF 链接都没有 —— 空壳页。
+ * 2) 六个 category 归档（news 系列）与 /news/ 重复。
+ * 两类合计 74 个 URL 占 sitemap 5.7%，全部 noindex；sitemap 侧另行关闭。
+ * 回滚：删掉本段 + functions.php.bak.20261028_prune
+ */
+add_filter( 'rank_math/frontend/robots', function ( $robots ) {
+	$kill = false;
+	if ( is_singular( 'download' ) ) {
+		$kill = true;
+	} elseif ( is_category() ) {
+		$term = get_queried_object();
+		if ( $term && ! empty( $term->slug ) && 0 === strpos( $term->slug, 'news' ) ) {
+			$kill = true;
+		}
+	}
+	if ( $kill ) {
+		$robots = array( 'index' => 'noindex', 'follow' => 'follow' );
+	}
+	return $robots;
+}, 20 );
+
+/**
+ * 2026-10-28 买家 FAQ 入链（zz）
+ *
+ * /faqs/ 下 10 条在 sitemap 里躺了数月，URL Inspection 一律
+ * "Discovered - currently not indexed"，从未被抓。实测：四个已收录商务页
+ * （/about-us/ /oem/ /quote/ /contact-us/）正文里指向 /faqs/ 的链接为 0，
+ * 唯一入口是那个同样没被抓的 /faqs/ 归档页 —— 这批页在"已抓集合"里是孤儿。
+ * 这四个页面 post_content 为空、全部由 page-*.php 模板渲染，the_content 过滤器
+ * 不生效，因此本块由模板直接调用 ew_buyer_faq_block()。
+ *
+ * 只对英文页输出（译文页的 pll_current_language 不是 en）。
+ * 回滚：删掉本段，并还原 page-{about,oem,contact,quote}.php
+ *       + functions.php.bak.20261028_faqlink
+ */
+if ( ! function_exists( 'ew_buyer_faq_block' ) ) {
+	function ew_buyer_faq_block() {
+		if ( function_exists( 'pll_current_language' ) && 'en' !== pll_current_language() ) {
+			return;
+		}
+		$items = array(
+			'how-do-i-choose-the-right-multimeter-or-tester-for-my-market' => 'How do I choose the right multimeter or tester for my market?',
+			'can-i-get-samples-before-placing-a-bulk-order'                => 'Can I get samples before placing a bulk order?',
+			'what-is-the-minimum-order-quantity-moq'                       => 'What is the minimum order quantity (MOQ)?',
+			'do-you-support-custom-branding-oem-odm'                       => 'Do you support custom branding (OEM / ODM)?',
+			'what-are-your-payment-terms'                                  => 'What are your payment terms?',
+			'how-long-is-the-lead-time'                                    => 'How long is the lead time?',
+			'are-your-instruments-ce-and-rohs-certified'                   => 'Are your instruments CE and RoHS certified?',
+			'what-is-the-warranty-on-your-products'                        => 'What is the warranty on your products?',
+			'can-i-visit-your-factory-in-wenzhou'                          => 'Can I visit your factory in Wenzhou?',
+		);
+		echo '<section class="ew-buyer-faq" style="max-width:1100px;margin:56px auto;padding:0 20px">';
+		echo '<h2 class="sec-title" id="buyer-faq">' . esc_html( 'Common buyer questions' ) . '</h2>';
+		echo '<ul style="list-style:none;padding:0;margin:18px 0 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px 24px">';
+		foreach ( $items as $slug => $label ) {
+			echo '<li><a href="' . esc_url( home_url( '/faqs/' . $slug . '/' ) ) . '">' . esc_html( $label ) . '</a></li>';
+		}
+		echo '</ul>';
+		echo '<p style="margin-top:18px"><a href="' . esc_url( home_url( '/faqs/' ) ) . '">' . esc_html( 'All buyer questions' ) . '</a></p>';
+		echo '</section>';
+	}
 }

@@ -13,7 +13,7 @@ get_header();
 
 <div class="page-head page-head--premium page-head--about" data-animation-wrap><div class="container">
 	<p class="page-head__eyebrow" data-animation="1">CHINYOO / SINCE 2008</p>
-	<h1 data-animation="1"><?php ew_esc_html_e('About Wenzhou Zhengyuan Electronics Co., Ltd.'); ?></h1>
+	<h1 data-animation="1"><?php ew_esc_html_e('About Wenzhou Zhengyuan Electronic Co., Ltd.'); ?></h1>
 	<p class="entry-content" data-animation="2"><?php ew_esc_html_e('A high-tech manufacturer of electrical measuring tools in Wenzhou — China\'s electrical hardware capital.'); ?></p>
 	<div class="certs"><span class="cert">CE (EMC · LVD)</span><span class="cert">RoHS</span><span class="cert">ISO 9001</span><span class="cert">OEM / ODM</span></div>
 </div></div>
@@ -23,7 +23,7 @@ get_header();
 	<section class="about-intro">
 		<div>
 			<h2 class="sec-title" style="text-align:left"><?php ew_esc_html_e('Our Factory'); ?></h2>
-			<p><?php ew_e('Founded in 2008 and now 18 years strong, Wenzhou Zhengyuan Electronics Co., Ltd. (brand <strong>CHINYOO</strong>) is a high-tech enterprise focused on the R&D, production and sales of electrical measuring tools — from digital multimeters to high-precision smart voltage testers. With specialized production, automated manufacturing, rigorous quality control and continuous innovation, we have become a leading voltage tester and multimeter manufacturer, exporting across Europe, Southeast Asia, South America and other global markets.'); ?></p>
+			<p><?php ew_e('Founded in 2008 and now 18 years strong, Wenzhou Zhengyuan Electronic Co., Ltd. (brand <strong>CHINYOO</strong>) is a high-tech enterprise focused on the R&D, production and sales of electrical measuring tools — from digital multimeters to high-precision smart voltage testers. With specialized production, automated manufacturing, rigorous quality control and continuous innovation, we have become a leading voltage tester and multimeter manufacturer, exporting across Europe, Southeast Asia, South America and other global markets.'); ?></p>
 			<p style="margin-top:10px"><?php ew_esc_html_e('We welcome OEM & ODM projects: custom logos, custom ranges, custom colors, custom packaging and flexible MOQ.'); ?></p>
 			<a class="btn-accent" href="#inquiry" style="display:inline-block;margin-top:18px"><?php ew_esc_html_e('Request Factory Tour & Catalog'); ?></a>
 		</div>
@@ -143,6 +143,7 @@ get_header();
 		<?php get_template_part( 'template-parts/inquiry-form', null, array( 'product_name' => '' ) ); ?>
 	</div>
 </section>
+<?php ew_buyer_faq_block(); ?>
 </main>
 <?php
 get_footer();

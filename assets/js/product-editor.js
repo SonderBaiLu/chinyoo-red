@@ -45,7 +45,8 @@
                 if (/中文|chinese|(_|-)cn($|版|\b)/i.test(base)) return '详情 CN';
                 return '详情 EN/CN';
             }
-            var m = base.match(/(展示图|轮播图|场景图|展示)\s*(\d+)?/);
+            if (/使用场景图|使用场景|应用场景|场景图|场景/.test(base)) return '使用场景图';
+            var m = base.match(/(展示图|轮播图|展示)\s*(\d+)?/);
             if (m) return '画廊' + (m[2] || '');
             return '画廊';
         }
@@ -146,16 +147,19 @@
     });
     $(document).on('click', '.ew-editor-add-images', function () {
         var $section = $(this).closest('.ew-editor-images');
-        var frame = wp.media({ title: '选择商品图片（可多选）', button: { text: '添加所选图片' }, library: { type: 'image' }, multiple: true });
+        var $list = $section.find('.ew-editor-image-list');
+        var single = $list.attr('data-single') === '1';
+        var frame = wp.media({ title: single ? '选择商品图片' : '选择商品图片（可多选）', button: { text: single ? '使用这张图片' : '添加所选图片' }, library: { type: 'image' }, multiple: !single });
         frame.on('select', function () {
-            var existing = $section.find('.ew-editor-image-list > li').map(function () { return Number($(this).data('id')); }).get();
+            var existing = $list.children('li').map(function () { return Number($(this).data('id')); }).get();
+            if (single) { $list.empty(); existing = []; }
             frame.state().get('selection').each(function (attachment) {
                 var item = attachment.toJSON(); if (existing.indexOf(item.id) !== -1) return; existing.push(item.id);
                 var src = item.sizes && item.sizes.medium ? item.sizes.medium.url : (item.sizes && item.sizes.thumbnail ? item.sizes.thumbnail.url : item.url);
                 var $li = $('<li class="ew-image-card">').attr('data-id', item.id);
                 $('<span class="dashicons dashicons-move ew-drag-handle" aria-hidden="true"></span>').appendTo($li); $('<img alt="">').attr('src', src).appendTo($li);
                 var $footer = $('<div class="ew-image-card-footer">').appendTo($li); $('<span>').text('#' + item.id).appendTo($footer);
-                $('<button type="button" class="ew-image-remove"><span class="dashicons dashicons-trash"></span>移除</button>').appendTo($footer); $section.find('.ew-editor-image-list').append($li);
+                $('<button type="button" class="ew-image-remove"><span class="dashicons dashicons-trash"></span>移除</button>').appendTo($footer); $list.append($li);
             });
             refreshImages($section);
         }); frame.open();

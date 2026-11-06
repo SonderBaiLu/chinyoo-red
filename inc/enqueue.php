@@ -128,16 +128,18 @@ function ew_enqueue_assets() {
     );
 
     // Cloudflare Turnstile 人机验证（询盘表单）。defer 加载，不阻塞首屏。
-    wp_enqueue_script(
-        'ew-turnstile',
-        'https://challenges.cloudflare.com/turnstile/v0/api.js',
-        array(),
-        null,
-        array(
-            'in_footer' => true,
-            'strategy'  => 'defer',
-        )
-    );
+    if ( ew_turnstile_enabled() ) {
+        wp_enqueue_script(
+            'ew-turnstile',
+            'https://challenges.cloudflare.com/turnstile/v0/api.js',
+            array(),
+            null,
+            array(
+                'in_footer' => true,
+                'strategy'  => 'defer',
+            )
+        );
+    }
 
     // P4 WooCommerce theme scripts (UNI-T style: series model selector,
     // inquiry CTA autofill/scroll, gallery thumbnails) — depends on jQuery.
@@ -171,65 +173,6 @@ function ew_enqueue_assets() {
         $v_anim,
         true
     );
-
-    // YITH WooCommerce Zoom Magnifier(详情页放大,UNI-T 同款插件)。
-    // yith-magnifier.js 来自 YITH 插件本体,参数与 meters.uni-trend.com 页面完全一致:
-    //   zoomWidth/zoomHeight=400, position=right, lensOpacity=0.5
-    // 缩略图切换也由插件 _initGallery 处理(单产品页 .images > ul.yith_magnifier_gallery)。
-    if ( is_product() ) {
-        $v_yithcss = ($t = filemtime( "$dir/assets/css/yith-magnifier.css" )) === false ? EW_THEME_VERSION : (string) $t;
-        $v_yithfcss = ($t = filemtime( "$dir/assets/css/yith-frontend.css" )) === false ? EW_THEME_VERSION : (string) $t;
-        $v_yithjs = ($t = filemtime( "$dir/assets/js/yith-magnifier.js" )) === false ? EW_THEME_VERSION : (string) $t;
-
-        wp_enqueue_style(
-            'ew-yith-magnifier',
-            EW_THEME_URI . '/assets/css/yith-magnifier.css',
-            array( 'ew-p4-style' ),
-            $v_yithcss
-        );
-        wp_enqueue_style(
-            'ew-yith-frontend',
-            EW_THEME_URI . '/assets/css/yith-frontend.css',
-            array( 'ew-yith-magnifier' ),
-            $v_yithfcss
-        );
-        wp_enqueue_script(
-            'ew-yith-magnifier',
-            EW_THEME_URI . '/assets/js/yith-magnifier.js',
-            array( 'jquery' ),
-            $v_yithjs,
-            true
-        );
-
-        // 插件依赖的全局对象(与 UNI-T 页面输出的结构一致)。
-        wp_localize_script( 'ew-yith-magnifier', 'yith_wc_zoom_magnifier_storage_object', array(
-            'ajax_url'          => admin_url( 'admin-ajax.php' ),
-            'mouse_trap_width'  => '100%',
-            'mouse_trap_height' => '100%',
-        ) );
-
-        wp_localize_script( 'ew-yith-magnifier', 'yith_magnifier_options', array(
-            'enableSlider'           => false,
-            'showTitle'              => false,
-            'zoomWidth'              => '400',
-            'zoomHeight'             => '400',
-            'position'               => 'right',
-            'softFocus'              => false,
-            'adjustY'                => 0,
-            'disableRightClick'      => false,
-            'phoneBehavior'          => 'right',
-            'zoom_wrap_additional_css' => '',
-            'lensOpacity'            => '0.5',
-            'loadingLabel'           => 'Loading...',
-        ) );
-
-        // 初始化:确保 yith-magnifier.js 已加载后再调用(与 UNI-T 的 ywzm_frontend.js 相同)。
-        wp_add_inline_script(
-            'ew-yith-magnifier',
-            'jQuery(function($){ if( window.yith_magnifier_options && $.fn.yith_magnifier && $(".images").length ){ $(".images").yith_magnifier( window.yith_magnifier_options ); } });',
-            'after'
-        );
-    }
 
     // Pass AJAX URL, nonce and language-aware telephone defaults to JS.
     $ew_current_lang = function_exists( 'pll_current_language' ) ? pll_current_language( 'slug' ) : 'en';

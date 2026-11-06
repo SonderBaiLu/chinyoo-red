@@ -20,8 +20,8 @@ $product_name = is_string( $product_name ) ? trim( $product_name ) : '';
             <input type="email" id="inquiry_email" name="inquiry_email" placeholder="<?php ew_esc_attr_e('your@email.com'); ?>" required>
         </div>
         <div class="inquiry-form__field">
-            <label for="inquiry_phone"><?php ew_esc_html_e('Phone / WhatsApp'); ?> <span style="color:#cc0000;">*</span></label>
-            <input type="tel" id="inquiry_phone" name="inquiry_phone" placeholder="<?php ew_esc_attr_e('WhatsApp / WeChat number'); ?>" autocomplete="tel" inputmode="tel" required>
+            <label for="inquiry_phone"><?php ew_esc_html_e('Phone / WhatsApp'); ?></label>
+            <input type="tel" id="inquiry_phone" name="inquiry_phone" placeholder="<?php ew_esc_attr_e('WhatsApp / WeChat number (optional)'); ?>" autocomplete="tel" inputmode="tel">
             <input type="hidden" id="inquiry_phone_country" name="inquiry_phone_country" value="us">
         </div>
     </div>
@@ -44,13 +44,15 @@ $product_name = is_string( $product_name ) ? trim( $product_name ) : '';
     </div>
     <div class="inquiry-form__feedback" id="inquiry-feedback" style="display:none;"></div>
 
-    <?php // Turnstile 人机验证：token 由组件自己写进 cf-turnstile-response 字段，随 FormData 一起提交。 ?>
-    <div class="inquiry-form__turnstile">
-        <div class="cf-turnstile"
-             data-sitekey="<?php echo esc_attr( EW_TURNSTILE_SITE_KEY ); ?>"
-             data-language="<?php echo esc_attr( ew_turnstile_language() ); ?>"
-             data-size="flexible"></div>
-    </div>
+    <?php // Turnstile 人机验证：已按「宁放过不错杀」关闭，开关打开时才渲染验证框。 ?>
+    <?php if ( ew_turnstile_enabled() ) : ?>
+        <div class="inquiry-form__turnstile">
+            <div class="cf-turnstile"
+                 data-sitekey="<?php echo esc_attr( EW_TURNSTILE_SITE_KEY ); ?>"
+                 data-language="<?php echo esc_attr( ew_turnstile_language() ); ?>"
+                 data-size="flexible"></div>
+        </div>
+    <?php endif; ?>
 
     <button type="submit" class="btn btn--inquiry btn--lg" style="width:100%; padding:14px 0; font-size:1rem;">
         <?php ew_esc_html_e('Submit Inquiry'); ?>
