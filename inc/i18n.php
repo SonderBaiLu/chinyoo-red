@@ -45,6 +45,143 @@ function ew_n( $single, $plural, $n ) {
 	return function_exists( 'pll__' ) ? pll__( $s ) : $s;
 }
 
+/**
+ * Language flag — inline flat SVG for the header switcher.
+ *
+ * Polylang ships a bitmap flag per language (plugins/polylang/flags/xx.png).
+ * Those are small, rounded-corner bitmaps, so they read soft/blurry next to
+ * crisp UI text. We draw our own 4:3 vector instead: hard corners, flat fills,
+ * no gradient, no stroke, no extra HTTP request — identical at any DPR.
+ *
+ * The country is read from Polylang's own flag URL, so editing a language's
+ * flag in 后台 still moves the switcher with it; slug is the fallback, and an
+ * unknown language gets a neutral globe so nothing renders blank.
+ *
+ * @param array|string $lang Polylang raw language row, or a bare slug.
+ */
+function ew_lang_flag( $lang ) {
+	$code = '';
+
+	if ( is_array( $lang ) ) {
+		$flag = isset( $lang['flag'] ) ? $lang['flag'] : '';
+		$url  = is_array( $flag ) ? ( isset( $flag['url'] ) ? $flag['url'] : '' ) : (string) $flag;
+		if ( '' !== $url ) {
+			// .../flags/cz.png → cz
+			$code = strtolower( (string) pathinfo( (string) parse_url( $url, PHP_URL_PATH ), PATHINFO_FILENAME ) );
+		}
+		if ( '' === $code && ! empty( $lang['slug'] ) ) {
+			$code = strtolower( (string) $lang['slug'] );
+		}
+	} else {
+		$code = strtolower( (string) $lang );
+	}
+
+	$flags = ew_lang_flags();
+	echo isset( $flags[ $code ] ) ? $flags[ $code ] : $flags['_fallback']; // static markup, no user input
+}
+
+/**
+ * Flat 4:3 flag artwork, keyed by ISO country code (the Polylang flag slug).
+ * Kept as whole <svg> strings so the caller can echo them without escaping.
+ *
+ * @return array<string,string>
+ */
+function ew_lang_flags() {
+	static $flags = null;
+	if ( null !== $flags ) {
+		return $flags;
+	}
+
+	$open = '<svg class="lang-switcher__flag" viewBox="0 0 24 18" aria-hidden="true" focusable="false">';
+	$end  = '</svg>';
+	$star = 'M0 -1 L0.2245 -0.309 L0.951 -0.309 L0.363 0.118 L0.588 0.809 L0 0.382 L-0.588 0.809 L-0.363 0.118 L-0.951 -0.309 L-0.2245 -0.309 Z';
+
+	$flags = array(
+		// English → Polylang flag "us": 13 stripes + union field.
+		'us'        => $open
+			. '<rect width="24" height="18" fill="#fff"/>'
+			. '<g fill="#d02f44">'
+			. '<rect width="24" height="1.385"/><rect y="2.769" width="24" height="1.385"/>'
+			. '<rect y="5.538" width="24" height="1.385"/><rect y="8.308" width="24" height="1.385"/>'
+			. '<rect y="11.077" width="24" height="1.385"/><rect y="13.846" width="24" height="1.385"/>'
+			. '<rect y="16.615" width="24" height="1.385"/>'
+			. '</g>'
+			. '<rect width="9.6" height="9.692" fill="#46467f"/>'
+			. '<g fill="#fff">'
+			. '<circle cx="1.4" cy="1.9" r=".5"/><circle cx="3.6" cy="1.9" r=".5"/>'
+			. '<circle cx="5.8" cy="1.9" r=".5"/><circle cx="8" cy="1.9" r=".5"/>'
+			. '<circle cx="2.5" cy="4.85" r=".5"/><circle cx="4.7" cy="4.85" r=".5"/>'
+			. '<circle cx="6.9" cy="4.85" r=".5"/>'
+			. '<circle cx="1.4" cy="7.8" r=".5"/><circle cx="3.6" cy="7.8" r=".5"/>'
+			. '<circle cx="5.8" cy="7.8" r=".5"/><circle cx="8" cy="7.8" r=".5"/>'
+			. '</g>'
+			. $end,
+		// Polski
+		'pl'        => $open
+			. '<rect width="24" height="9" fill="#fff"/>'
+			. '<rect y="9" width="24" height="9" fill="#dc143c"/>'
+			. $end,
+		// Čeština
+		'cz'        => $open
+			. '<rect width="24" height="9" fill="#fff"/>'
+			. '<rect y="9" width="24" height="9" fill="#d7141a"/>'
+			. '<path d="M0 0 L11 9 L0 18 Z" fill="#11457e"/>'
+			. $end,
+		// Română
+		'ro'        => $open
+			. '<rect width="8" height="18" fill="#002b7f"/>'
+			. '<rect x="8" width="8" height="18" fill="#fcd116"/>'
+			. '<rect x="16" width="8" height="18" fill="#ce1126"/>'
+			. $end,
+		// 简体中文
+		'cn'        => $open
+			. '<rect width="24" height="18" fill="#ee1c25"/>'
+			. '<g fill="#ffde00">'
+			. '<path d="' . $star . '" transform="translate(4.6 4.7) scale(1.55)"/>'
+			. '<path d="' . $star . '" transform="translate(8.4 2.6) scale(.55)"/>'
+			. '<path d="' . $star . '" transform="translate(9.8 4.4) scale(.55)"/>'
+			. '<path d="' . $star . '" transform="translate(9.8 6.5) scale(.55)"/>'
+			. '<path d="' . $star . '" transform="translate(8.4 8.3) scale(.55)"/>'
+			. '</g>'
+			. $end,
+		// Español
+		'es'        => $open
+			. '<rect width="24" height="18" fill="#aa151b"/>'
+			. '<rect y="4.5" width="24" height="9" fill="#f1bf00"/>'
+			. '<path d="M5.3 7.1h3v3c0 1.1-.75 1.85-1.5 2.2-.75-.35-1.5-1.1-1.5-2.2z" fill="#c8b100"/>'
+			. '<path d="M5.95 7.7h1.7v2.2c0 .6-.42 1.05-.85 1.28-.43-.23-.85-.68-.85-1.28z" fill="#aa151b"/>'
+			. $end,
+		// Русский
+		'ru'        => $open
+			. '<rect width="24" height="6" fill="#fff"/>'
+			. '<rect y="6" width="24" height="6" fill="#0039a6"/>'
+			. '<rect y="12" width="24" height="6" fill="#d52b1e"/>'
+			. $end,
+		// العربية — shahada and sword simplified to flat white marks (unreadable at 18px anyway).
+		'sa'        => $open
+			. '<rect width="24" height="18" fill="#006c35"/>'
+			. '<g fill="#fff">'
+			. '<rect x="4.8" y="4.3" width="14.4" height="1.05"/>'
+			. '<rect x="6.2" y="6.15" width="11.6" height="1.05"/>'
+			. '<rect x="4.8" y="8" width="9.6" height="1.05"/>'
+			. '<path d="M21 11.3H7.8l-2 1.35 2 1.35H21z"/>'
+			. '<rect x="20.6" y="10.9" width="1.3" height="4.2"/>'
+			. '</g>'
+			. $end,
+		// Unknown language → neutral globe rather than an empty box.
+		'_fallback' => $open
+			. '<rect width="24" height="18" fill="#e8ecf0"/>'
+			. '<g fill="none" stroke="#64717f" stroke-width="1.4">'
+			. '<circle cx="12" cy="9" r="6.4"/>'
+			. '<path d="M5.6 9h12.8"/>'
+			. '<path d="M12 2.6c2.8 2.6 2.8 10.2 0 12.8M12 2.6c-2.8 2.6-2.8 10.2 0 12.8"/>'
+			. '</g>'
+			. $end,
+	);
+
+	return $flags;
+}
+
 // --- Register theme strings for the Polylang Strings panel ---------------------
 function ew_register_strings() {
 	if ( ! function_exists( 'pll_register_string' ) ) {

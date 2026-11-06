@@ -79,15 +79,30 @@
 					}
 					if ( is_array( $ew_langs ) && count( $ew_langs ) > 1 ) :
 						$ew_cur = function_exists( 'pll_current_language' ) ? pll_current_language() : '';
+						// 当前语言的 raw 行：按钮要显示它的国旗（未知语言回退到 slug）。
+						$ew_cur_row = null;
+						foreach ( $ew_langs as $ew_l_one ) {
+							if ( ! empty( $ew_l_one['current_lang'] ) ) {
+								$ew_cur_row = $ew_l_one;
+								break;
+							}
+						}
 						?>
 						<button type="button" class="lang-switcher__btn" aria-haspopup="true" aria-expanded="false">
-							<?php echo esc_html( strtoupper( $ew_cur ) ); ?><span class="lang-switcher__caret" aria-hidden="true"></span>
+							<?php ew_lang_flag( null !== $ew_cur_row ? $ew_cur_row : $ew_cur ); ?><span class="lang-switcher__btn-code"><?php echo esc_html( strtoupper( $ew_cur ) ); ?></span><span class="lang-switcher__caret" aria-hidden="true"></span>
 						</button>
 						<ul class="lang-switcher__menu">
 							<?php foreach ( $ew_langs as $ew_lang ) : ?>
-								<?php $ew_code = isset( $ew_lang['slug'] ) ? strtoupper( $ew_lang['slug'] ) : ''; ?>
+								<?php
+								$ew_slug = isset( $ew_lang['slug'] ) ? $ew_lang['slug'] : '';
+								// Polylang 存的是语言原生名（English / Čeština / 简体中文…），后台可改；
+								// 空则退回语言代码，避免出现空白项。
+								$ew_name = ! empty( $ew_lang['name'] ) ? $ew_lang['name'] : strtoupper( $ew_slug );
+								?>
 								<li class="lang-switcher__item">
-									<a href="<?php echo esc_url( $ew_lang['url'] ); ?>" class="lang-switcher__link" hreflang="<?php echo esc_attr( $ew_lang['slug'] ); ?>" lang="<?php echo esc_attr( $ew_lang['slug'] ); ?>"<?php echo ! empty( $ew_lang['current_lang'] ) ? ' aria-current="true"' : ''; ?>><?php echo esc_html( $ew_code ); ?></a>
+									<a href="<?php echo esc_url( $ew_lang['url'] ); ?>" class="lang-switcher__link" hreflang="<?php echo esc_attr( $ew_slug ); ?>" lang="<?php echo esc_attr( $ew_slug ); ?>"<?php echo ! empty( $ew_lang['current_lang'] ) ? ' aria-current="true"' : ''; ?>>
+										<?php ew_lang_flag( $ew_lang ); ?><span class="lang-switcher__name"><?php echo esc_html( $ew_name ); ?></span>
+									</a>
 								</li>
 							<?php endforeach; ?>
 						</ul>
