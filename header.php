@@ -79,17 +79,9 @@
 					}
 					if ( is_array( $ew_langs ) && count( $ew_langs ) > 1 ) :
 						$ew_cur = function_exists( 'pll_current_language' ) ? pll_current_language() : '';
-						// 当前语言的 raw 行：按钮要显示它的国旗（未知语言回退到 slug）。
-						$ew_cur_row = null;
-						foreach ( $ew_langs as $ew_l_one ) {
-							if ( ! empty( $ew_l_one['current_lang'] ) ) {
-								$ew_cur_row = $ew_l_one;
-								break;
-							}
-						}
 						?>
 						<button type="button" class="lang-switcher__btn" aria-haspopup="true" aria-expanded="false">
-							<?php ew_lang_flag( null !== $ew_cur_row ? $ew_cur_row : $ew_cur ); ?><span class="lang-switcher__btn-code"><?php echo esc_html( strtoupper( $ew_cur ) ); ?></span>
+							<span class="lang-switcher__btn-code"><?php echo esc_html( strtoupper( $ew_cur ) ); ?></span>
 						</button>
 						<ul class="lang-switcher__menu">
 							<?php foreach ( $ew_langs as $ew_lang ) : ?>
