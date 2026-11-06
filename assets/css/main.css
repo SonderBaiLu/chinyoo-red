@@ -160,19 +160,6 @@ button {
     opacity: .8
 }
 
-/* 顶栏信息项：小图标与文字同基线（图标用 currentColor 描边，随文字一起淡） */
-.topbar__item {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px
-}
-
-.topbar__ic {
-    width: 13px;
-    height: 13px;
-    flex: 0 0 auto
-}
-
 .topbar a {
     color: inherit
 }
