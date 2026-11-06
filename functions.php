@@ -200,8 +200,10 @@ add_action('wp_footer', function () {
 });
 
 // --- Language switcher toggle + outside click close ---
+// 弹出方向：优先从按钮右侧向右展开；右侧剩余空间不够时回退为右对齐向左展开，
+// 避免在窄屏或 RTL 布局下溢出视口。
 add_action('wp_footer', function () {
-    echo '<script>(function(){var w=document.getElementById("lang-switcher");if(!w)return;var b=w.querySelector(".lang-switcher__btn");if(!b)return;b.addEventListener("click",function(e){e.stopPropagation();var open=w.classList.toggle("is-open");b.setAttribute("aria-expanded",open?"true":"false");});document.addEventListener("click",function(e){if(!w.contains(e.target)){w.classList.remove("is-open");b.setAttribute("aria-expanded","false");}});document.addEventListener("keydown",function(e){if(e.key==="Escape"){w.classList.remove("is-open");b.setAttribute("aria-expanded","false");}});}());</script>';
+    echo '<script>(function(){var w=document.getElementById("lang-switcher");if(!w)return;var b=w.querySelector(".lang-switcher__btn");if(!b)return;var m=w.querySelector(".lang-switcher__menu");function place(){if(!m)return;var vw=document.documentElement.clientWidth;var r=b.getBoundingClientRect();var mw=Math.min(vw-32,vw<=1024?304:420);if(vw-r.right-12>=mw){m.style.left="100%";m.style.right="auto";}else{m.style.left="auto";m.style.right="0";}}b.addEventListener("click",function(e){e.stopPropagation();var open=!w.classList.contains("is-open");if(open){place();}w.classList.toggle("is-open",open);b.setAttribute("aria-expanded",open?"true":"false");});document.addEventListener("click",function(e){if(!w.contains(e.target)){w.classList.remove("is-open");b.setAttribute("aria-expanded","false");}});document.addEventListener("keydown",function(e){if(e.key==="Escape"){w.classList.remove("is-open");b.setAttribute("aria-expanded","false");}});window.addEventListener("resize",function(){if(w.classList.contains("is-open")){place();}});}());</script>';
 });
 
 // --- B2B: this is an inquiry-driven catalog, not an online shop ---

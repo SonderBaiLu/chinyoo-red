@@ -89,7 +89,7 @@
 						}
 						?>
 						<button type="button" class="lang-switcher__btn" aria-haspopup="true" aria-expanded="false">
-							<?php ew_lang_flag( null !== $ew_cur_row ? $ew_cur_row : $ew_cur ); ?><span class="lang-switcher__btn-code"><?php echo esc_html( strtoupper( $ew_cur ) ); ?></span><span class="lang-switcher__caret" aria-hidden="true"></span>
+							<?php ew_lang_flag( null !== $ew_cur_row ? $ew_cur_row : $ew_cur ); ?><span class="lang-switcher__btn-code"><?php echo esc_html( strtoupper( $ew_cur ) ); ?></span>
 						</button>
 						<ul class="lang-switcher__menu">
 							<?php foreach ( $ew_langs as $ew_lang ) : ?>
