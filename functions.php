@@ -200,10 +200,10 @@ add_action('wp_footer', function () {
 });
 
 // --- Language switcher toggle + outside click close ---
-// 菜单以按钮中心为轴向下展开：算出按钮中心，再夹到视口安全区内，
-// 通过 --ls-left 交给 CSS（菜单自身 translateX(-50%) 居中）。
+// 菜单以按钮中心为轴向下展开：算出按钮中心，夹到视口安全区后交给 --ls-left；
+// 同时把按钮中心换算成 --ls-arrow，保证菜单被推离中心时小三角仍指着按钮。
 add_action('wp_footer', function () {
-    echo '<script>(function(){var w=document.getElementById("lang-switcher");if(!w)return;var b=w.querySelector(".lang-switcher__btn");if(!b)return;var m=w.querySelector(".lang-switcher__menu");function place(){if(!m)return;var vw=document.documentElement.clientWidth;var r=b.getBoundingClientRect();var mw=Math.min(vw-24,window.innerWidth<=1024?304:420);var half=mw/2;var cx=r.left+r.width/2;cx=Math.max(12+half,Math.min(cx,vw-12-half));m.style.setProperty("--ls-left",(cx-r.left)+"px");}b.addEventListener("click",function(e){e.stopPropagation();var open=!w.classList.contains("is-open");if(open){place();}w.classList.toggle("is-open",open);b.setAttribute("aria-expanded",open?"true":"false");});document.addEventListener("click",function(e){if(!w.contains(e.target)){w.classList.remove("is-open");b.setAttribute("aria-expanded","false");}});document.addEventListener("keydown",function(e){if(e.key==="Escape"){w.classList.remove("is-open");b.setAttribute("aria-expanded","false");}});window.addEventListener("resize",function(){if(w.classList.contains("is-open")){place();}});}());</script>';
+    echo '<script>(function(){var w=document.getElementById("lang-switcher");if(!w)return;var b=w.querySelector(".lang-switcher__btn");if(!b)return;var m=w.querySelector(".lang-switcher__menu");function place(){if(!m)return;var vw=document.documentElement.clientWidth;var r=b.getBoundingClientRect();var mw=Math.min(vw-24,window.innerWidth<=1024?304:420);var half=mw/2;var btnCx=r.left+r.width/2;var cx=Math.max(12+half,Math.min(btnCx,vw-12-half));m.style.setProperty("--ls-left",(cx-r.left)+"px");var ax=Math.max(16,Math.min(btnCx-(cx-half),mw-16));m.style.setProperty("--ls-arrow",ax+"px");}b.addEventListener("click",function(e){e.stopPropagation();var open=!w.classList.contains("is-open");if(open){place();}w.classList.toggle("is-open",open);b.setAttribute("aria-expanded",open?"true":"false");});document.addEventListener("click",function(e){if(!w.contains(e.target)){w.classList.remove("is-open");b.setAttribute("aria-expanded","false");}});document.addEventListener("keydown",function(e){if(e.key==="Escape"){w.classList.remove("is-open");b.setAttribute("aria-expanded","false");}});window.addEventListener("resize",function(){if(w.classList.contains("is-open")){place();}});}());</script>';
 });
 
 // --- B2B: this is an inquiry-driven catalog, not an online shop ---

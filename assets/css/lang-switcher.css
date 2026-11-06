@@ -79,15 +79,17 @@
 	transition: opacity .18s ease, transform .18s cubic-bezier(.2, .8, .3, 1), visibility .18s;
 }
 
-/* 指向按钮的小倒三角：旋转 45° 的方块只留上/左边框，与面板描边连成一体 */
+/* 指向按钮的小倒三角：旋转 45° 的方块只留上/左边框，与面板描边连成一体。
+   --ls-arrow 由脚本给出按钮中心的水平位置；窄屏菜单被夹到视口内时，
+   箭头仍然对着按钮，而不是固定跟着面板中线。 */
 .lang-switcher__menu::before {
 	content: "";
 	position: absolute;
 	top: -6px;
-	left: 50%;
+	left: var(--ls-arrow, 50%);
 	width: 11px;
 	height: 11px;
-	margin-left: -6px;
+	margin-left: -5.5px;
 	background: var(--c-surface);
 	border-top: 1px solid var(--c-line);
 	border-left: 1px solid var(--c-line);
