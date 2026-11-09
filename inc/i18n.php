@@ -87,6 +87,8 @@ function ew_lang_flag( $lang ) {
 		'zh_tw' => 'tw',
 		'ar'    => 'sa',
 		'cs'    => 'cz',
+		'ja'    => 'jp',
+		'ko'    => 'kr',
 	);
 	if ( isset( $aliases[ $code ] ) ) {
 		$code = $aliases[ $code ];
@@ -198,6 +200,27 @@ function ew_lang_flags() {
 			. '<rect width="8" height="18" fill="#009246"/>'
 			. '<rect x="8" width="8" height="18" fill="#fff"/>'
 			. '<rect x="16" width="8" height="18" fill="#ce2b37"/>'
+			. $end,
+		// 日本語（Polylang flag_code = jp）
+		'jp'        => $open
+			. '<rect width="24" height="18" fill="#fff"/>'
+			. '<circle cx="12" cy="9" r="5.4" fill="#bc002d"/>'
+			. $end,
+		// 한국어（Polylang flag_code = kr）
+		'kr'        => $open
+			. '<rect width="24" height="18" fill="#fff"/>'
+			. '<circle cx="12" cy="9" r="4.2" fill="#0047a0"/>'
+			. '<path d="M12 4.8a4.2 4.2 0 0 1 0 8.4 2.1 2.1 0 0 0 0-4.2 2.1 2.1 0 0 1 0-4.2z" fill="#cd2e3a"/>'
+			. '<g fill="#0f141a">'
+			. '<rect x="3.1" y="3.4" width="3.4" height=".8" transform="rotate(-33 4.8 3.8)"/>'
+			. '<rect x="3.1" y="5" width="3.4" height=".8" transform="rotate(-33 4.8 5.4)"/>'
+			. '<rect x="17.5" y="3.4" width="3.4" height=".8" transform="rotate(33 19.2 3.8)"/>'
+			. '<rect x="17.5" y="5" width="3.4" height=".8" transform="rotate(33 19.2 5.4)"/>'
+			. '<rect x="3.1" y="12.2" width="3.4" height=".8" transform="rotate(33 4.8 12.6)"/>'
+			. '<rect x="3.1" y="13.8" width="3.4" height=".8" transform="rotate(33 4.8 14.2)"/>'
+			. '<rect x="17.5" y="12.2" width="3.4" height=".8" transform="rotate(-33 19.2 12.6)"/>'
+			. '<rect x="17.5" y="13.8" width="3.4" height=".8" transform="rotate(-33 19.2 14.2)"/>'
+			. '</g>'
 			. $end,
 		// Español
 		'es'        => $open
