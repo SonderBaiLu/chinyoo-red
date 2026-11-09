@@ -283,6 +283,18 @@ function ew_ajax_account_register() {
 	wp_set_auth_cookie( $user_id, true, is_ssl() );
 	ew_wishlist_merge_for_user( $user_id );
 
+	// 通知站点负责人（钉钉实时 + 邮件留档）；失败不影响注册结果
+	ew_notify_new_registration(
+		$user_id,
+		array(
+			'email'   => $email,
+			'phone'   => $phone,
+			'company' => $company,
+			'country' => isset( $profile['country'] ) ? $profile['country'] : '',
+			'city'    => isset( $profile['city'] ) ? $profile['city'] : '',
+		)
+	);
+
 	nocache_headers();
 	wp_send_json_success(
 		array(

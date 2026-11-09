@@ -126,22 +126,6 @@ function ew_handle_inquiry() {
  * 支持自定义机器人三种安全设置：无、自定义关键词、加签。
  */
 function ew_dingtalk_push_inquiry( $name, $email, $phone, $company, $product, $message ) {
-    $webhook = defined( 'CHINYOO_DINGTALK_WEBHOOK' ) && CHINYOO_DINGTALK_WEBHOOK ? CHINYOO_DINGTALK_WEBHOOK : '';
-    if ( empty( $webhook ) ) {
-        return; // 未配置，静默跳过
-    }
-
-    $url = $webhook;
-
-    // 加签安全设置：URL 追加 timestamp + sign
-    if ( defined( 'CHINYOO_DINGTALK_SECRET' ) && CHINYOO_DINGTALK_SECRET ) {
-        $timestamp      = round( microtime( true ) * 1000 );
-        $string_to_sign = $timestamp . "\n" . CHINYOO_DINGTALK_SECRET;
-        $sign           = urlencode( base64_encode( hash_hmac( 'sha256', $string_to_sign, CHINYOO_DINGTALK_SECRET, true ) ) );
-        $sep            = ( strpos( $url, '?' ) !== false ) ? '&' : '?';
-        $url            = $url . $sep . 'timestamp=' . $timestamp . '&sign=' . $sign;
-    }
-
     // 注意：钉钉机器人自定义关键词为「新客户」，消息必须包含该词
     $content = '### 📩 新客户询盘通知' . "\n\n"
         . '**姓名：** ' . $name . "\n"
@@ -153,33 +137,8 @@ function ew_dingtalk_push_inquiry( $name, $email, $phone, $company, $product, $m
         . '**时间：** ' . date( 'Y-m-d H:i:s' ) . "\n"
         . '**后台：** ' . admin_url( 'edit.php?post_type=inquiry' );
 
-    $payload = array(
-        'msgtype'  => 'markdown',
-        'markdown' => array(
-            'title' => '新客户询盘通知',
-            'text'  => $content,
-        ),
-    );
-
-    $response = wp_remote_post( $url, array(
-        'body'    => wp_json_encode( $payload ),
-        'headers' => array( 'Content-Type' => 'application/json' ),
-        'timeout' => 10,
-    ) );
-
-    if ( is_wp_error( $response ) ) {
-        error_log( 'DingTalk push failed: ' . $response->get_error_message() );
-        return;
-    }
-
-    // 校验钉钉返回（可选日志）
-    $body = wp_remote_retrieve_body( $response );
-    if ( $body ) {
-        $decoded = json_decode( $body, true );
-        if ( isset( $decoded['errcode'] ) && (int) $decoded['errcode'] !== 0 ) {
-            error_log( 'DingTalk push error: ' . ( isset( $decoded['errmsg'] ) ? $decoded['errmsg'] : $body ) );
-        }
-    }
+    // 加签与发送统一在 inc/notify.php（与注册通知共用）
+    ew_dingtalk_post( '新客户询盘通知', $content );
 }
 
 /**

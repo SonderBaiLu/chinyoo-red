@@ -22,6 +22,7 @@ require_once EW_THEME_DIR . '/inc/custom-fields.php';
 require_once EW_THEME_DIR . '/inc/product-editor.php';
 require_once EW_THEME_DIR . '/inc/product-import.php';
 require_once EW_THEME_DIR . '/inc/turnstile.php';
+require_once EW_THEME_DIR . '/inc/notify.php';         // 钉钉 / 邮件通知（询盘与注册共用）
 require_once EW_THEME_DIR . '/inc/inquiry-handler.php';
 require_once EW_THEME_DIR . '/inc/wishlist.php';       // 收藏（游客 cookie + 用户 meta）
 require_once EW_THEME_DIR . '/inc/account.php';        // 客户登录 / 注册 / 资料 AJAX
