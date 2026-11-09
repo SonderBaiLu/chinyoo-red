@@ -62,29 +62,29 @@
 			</a>
 			<div class="lang-switcher" id="lang-switcher">
 				<?php
-				// 只列「当前对象有翻译」的语言，避免 Polylang 猜 URL 导致 404
+				// 语言菜单始终列出全部语言。当前页面缺少某语言版本时，
+				// 不隐藏该语言（否则菜单项会随页面忽多忽少：首页 14 种、询价页 5 种），
+				// 而是退回该语言首页——既不会 404，也不丢入口。
 				if ( function_exists( 'pll_the_languages' ) ) :
 					$ew_langs = pll_the_languages( array( 'raw' => 1, 'hide_current' => 0 ) );
 					if ( is_array( $ew_langs ) && function_exists( 'pll_current_language' ) ) {
 						$ew_cur_lang = pll_current_language();
 						$ew_qo       = get_queried_object();
 						if ( $ew_qo && ( $ew_qo instanceof WP_Term || $ew_qo instanceof WP_Post ) ) {
-							$ew_keep = array( $ew_cur_lang );
-							foreach ( $ew_langs as $ew_l ) {
+							foreach ( $ew_langs as $ew_l_key => $ew_l ) {
 								$ew_slug = isset( $ew_l['slug'] ) ? $ew_l['slug'] : '';
 								if ( ! $ew_slug || $ew_slug === $ew_cur_lang ) {
 									continue;
 								}
-								if ( $ew_qo instanceof WP_Term && function_exists( 'pll_get_term' ) && pll_get_term( $ew_qo->term_id, $ew_slug ) ) {
-									$ew_keep[] = $ew_slug;
-								} elseif ( $ew_qo instanceof WP_Post && function_exists( 'pll_get_post' ) && pll_get_post( $ew_qo->ID, $ew_slug ) ) {
-									$ew_keep[] = $ew_slug;
+								$ew_has = false;
+								if ( $ew_qo instanceof WP_Term && function_exists( 'pll_get_term' ) ) {
+									$ew_has = (bool) pll_get_term( $ew_qo->term_id, $ew_slug );
+								} elseif ( $ew_qo instanceof WP_Post && function_exists( 'pll_get_post' ) ) {
+									$ew_has = (bool) pll_get_post( $ew_qo->ID, $ew_slug );
 								}
-							}
-							foreach ( $ew_langs as $ew_l_key => $ew_l ) {
-								$ew_slug = isset( $ew_l['slug'] ) ? $ew_l['slug'] : '';
-								if ( ! in_array( $ew_slug, $ew_keep, true ) ) {
-									unset( $ew_langs[ $ew_l_key ] );
+								if ( ! $ew_has ) {
+									$ew_langs[ $ew_l_key ]['url']      = function_exists( 'pll_home_url' ) ? pll_home_url( $ew_slug ) : home_url( '/' . $ew_slug . '/' );
+									$ew_langs[ $ew_l_key ]['fallback'] = true;
 								}
 							}
 						}
