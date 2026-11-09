@@ -40,8 +40,7 @@
 }
 
 /* 扁平面旗：4:3、直角、纯色块。宽度写死，高度由 viewBox 比例撑开。
-   取代 mu-plugins/chinyoo-lang-flags.php 曾用 CSS ::before 塞的 Polylang PNG
-   （小位图 + 2px 圆角，放大发虚），该 mu-plugin 已下线。 */
+   与 mu-plugins/chinyoo-lang-flags.php 的圆角 PNG 伪元素互斥，见文件末尾覆盖段。 */
 .lang-switcher__flag {
 	width: 18px;
 	height: auto;
@@ -171,4 +170,26 @@ html[dir="rtl"] .lang-switcher__menu {
 		width: 304px;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
+}
+
+/* =========================================================================
+   强制以主题的扁平 SVG 为准，覆盖服务端 mu-plugin 的 PNG 伪元素旗标。
+
+   mu-plugins/chinyoo-lang-flags.php（服务端专属，不在本仓库）会给
+   de / fr / nl / it / ja / ko 输出：
+     .lang-switcher__link[hreflang="xx"] .lang-switcher__flag { display:none }
+     .lang-switcher__link[hreflang="xx"]::before { ... 圆角 PNG ... }
+   主题现已内置全部语言的 SVG（inc/i18n.php ew_lang_flags），不需要该补丁。
+   这里用更高优先级 + !important 强制 SVG 显示、伪元素隐藏；
+   等那个 mu-plugin 从服务器删除后，本段可以整块移除。
+   ========================================================================= */
+.lang-switcher__menu .lang-switcher__item .lang-switcher__link .lang-switcher__flag,
+.lang-switcher .lang-switcher__btn .lang-switcher__flag {
+	display: block !important;
+}
+
+.lang-switcher__menu .lang-switcher__item .lang-switcher__link::before,
+.lang-switcher .lang-switcher__btn::before {
+	content: none !important;
+	display: none !important;
 }
