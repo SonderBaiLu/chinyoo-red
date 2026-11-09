@@ -96,6 +96,17 @@ $ew_has_details = false;
 				<input id="reg-phone" type="tel" name="phone" autocomplete="tel" placeholder="+86 138 0013 8000" required>
 			</p>
 
+			<?php // 蜜罐：正常用户看不到也不会填；机器人常把表单字段填满 ?>
+			<p class="account-hp" aria-hidden="true">
+				<label for="reg-website">Website</label>
+				<input id="reg-website" type="text" name="website" tabindex="-1" autocomplete="off">
+			</p>
+
+			<?php if ( function_exists( 'ew_turnstile_enabled' ) && ew_turnstile_enabled() ) : ?>
+				<?php // 显式渲染（见 assets/js/account.js）：面板默认 display:none，自动渲染在隐藏容器里不可靠 ?>
+				<div class="account-turnstile" id="ew-turnstile-register"></div>
+			<?php endif; ?>
+
 			<details class="account-details" id="reg-details">
 				<summary><?php ew_esc_html_e( 'Company & shipping details (optional)' ); ?></summary>
 

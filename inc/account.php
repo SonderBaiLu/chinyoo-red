@@ -231,6 +231,27 @@ add_action( 'wp_ajax_nopriv_ew_account_login', 'ew_ajax_account_login' );
 function ew_ajax_account_register() {
 	check_ajax_referer( 'ew_account_nonce', 'nonce' );
 
+	// 蜜罐：真人看不到这个字段，机器人会把表单填满
+	if ( ! empty( $_POST['website'] ) ) {
+		error_log( '[ew-account] honeypot hit on register | IP ' . ew_account_client_ip() );
+		wp_send_json_error( array( 'message' => ew__( 'Registration failed. Please try again.' ) ) );
+	}
+
+	// 同一 IP 每小时最多 10 次注册尝试（共享出口 IP 的公司网络也够用）
+	$ew_ip       = ew_account_client_ip();
+	$ew_rate_key = 'ew_register_rate_' . md5( $ew_ip );
+	$ew_attempts = (int) get_transient( $ew_rate_key );
+	if ( $ew_attempts >= 10 ) {
+		wp_send_json_error( array( 'message' => ew__( 'Too many attempts. Please try again later.' ) ), 429 );
+	}
+	set_transient( $ew_rate_key, $ew_attempts + 1, HOUR_IN_SECONDS );
+
+	// Cloudflare Turnstile：启用时强制校验（未配置密钥时 verify 直接放行）
+	$ew_ts_token = isset( $_POST['cf-turnstile-response'] ) ? sanitize_text_field( wp_unslash( $_POST['cf-turnstile-response'] ) ) : '';
+	if ( ! ew_turnstile_verify( $ew_ts_token, $ew_ip ) ) {
+		wp_send_json_error( array( 'message' => ew__( 'Verification failed. Please refresh the page and try again.' ) ) );
+	}
+
 	$email    = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
 	$password = isset( $_POST['password'] ) ? (string) wp_unslash( $_POST['password'] ) : '';
 	$phone    = isset( $_POST['phone'] ) ? ew_account_normalize_phone( wp_unslash( $_POST['phone'] ) ) : '';

@@ -224,7 +224,7 @@ add_action( 'init', 'ew_account_register_strings', 20 );
  * `_pll_strings_translations` meta 里，格式为 [原文, 译文] 对数组。
  */
 function ew_account_import_strings() {
-	if ( '1' === get_option( 'ew_account_i18n_v4' ) ) {
+	if ( '1' === get_option( 'ew_account_i18n_v5' ) ) {
 		return;
 	}
 	if ( ! function_exists( 'pll_languages_list' ) || ! taxonomy_exists( 'language' ) ) {
@@ -274,7 +274,7 @@ function ew_account_import_strings() {
 		}
 	}
 
-	update_option( 'ew_account_i18n_v4', '1', false );
+	update_option( 'ew_account_i18n_v5', '1', false );
 	if ( $imported ) {
 		error_log( '[ew-account] imported ' . $imported . ' UI string translations' );
 	}

@@ -64,6 +64,9 @@ return array(
 		'%d model saved'                            => '已收藏 %d 个型号',
 		'Your wishlist is saved in this browser. Sign in to keep it on your account.' => '收藏保存在当前浏览器，登录后可同步到你的账户。',
 		'Signed in as %s'                           => '当前登录：%s',
+		'Verification failed. Please refresh the page and try again.' => '验证失败，请刷新页面后重试。',
+		'Too many attempts. Please try again later.' => '尝试次数过多，请稍后再试。',
+		'Registration failed. Please try again.'    => '注册失败，请重试。',
 	),
 
 	'es' => array(
@@ -115,6 +118,9 @@ return array(
 		'%d model saved'                            => '%d modelo guardado',
 		'Your wishlist is saved in this browser. Sign in to keep it on your account.' => 'Tu lista se guarda en este navegador. Inicia sesión para conservarla en tu cuenta.',
 		'Signed in as %s'                           => 'Sesión iniciada como %s',
+		'Verification failed. Please refresh the page and try again.' => 'La verificación ha fallado. Actualiza la página e inténtalo de nuevo.',
+		'Too many attempts. Please try again later.' => 'Demasiados intentos. Inténtalo más tarde.',
+		'Registration failed. Please try again.'    => 'El registro ha fallado. Inténtalo de nuevo.',
 	),
 
 	'ru' => array(
@@ -166,6 +172,9 @@ return array(
 		'%d model saved'                            => 'Сохранена модель: %d',
 		'Your wishlist is saved in this browser. Sign in to keep it on your account.' => 'Список хранится в этом браузере. Войдите, чтобы сохранить его в аккаунте.',
 		'Signed in as %s'                           => 'Вы вошли как %s',
+		'Verification failed. Please refresh the page and try again.' => 'Проверка не пройдена. Обновите страницу и попробуйте снова.',
+		'Too many attempts. Please try again later.' => 'Слишком много попыток. Повторите позже.',
+		'Registration failed. Please try again.'    => 'Не удалось зарегистрироваться. Попробуйте ещё раз.',
 	),
 
 	'ar' => array(
@@ -217,6 +226,9 @@ return array(
 		'%d model saved'                            => 'تم حفظ موديل واحد',
 		'Your wishlist is saved in this browser. Sign in to keep it on your account.' => 'تُحفظ قائمتك في هذا المتصفح. سجّل الدخول لحفظها في حسابك.',
 		'Signed in as %s'                           => 'مسجّل الدخول باسم %s',
+		'Verification failed. Please refresh the page and try again.' => 'فشل التحقق. يرجى تحديث الصفحة والمحاولة مرة أخرى.',
+		'Too many attempts. Please try again later.' => 'محاولات كثيرة جدًا. يرجى المحاولة لاحقًا.',
+		'Registration failed. Please try again.'    => 'فشل إنشاء الحساب. يرجى المحاولة مرة أخرى.',
 	),
 
 	'pl' => array(
@@ -268,6 +280,9 @@ return array(
 		'%d model saved'                            => 'Zapisany model: %d',
 		'Your wishlist is saved in this browser. Sign in to keep it on your account.' => 'Lista jest zapisana w tej przeglądarce. Zaloguj się, aby zachować ją na koncie.',
 		'Signed in as %s'                           => 'Zalogowano jako %s',
+		'Verification failed. Please refresh the page and try again.' => 'Weryfikacja nie powiodła się. Odśwież stronę i spróbuj ponownie.',
+		'Too many attempts. Please try again later.' => 'Zbyt wiele prób. Spróbuj później.',
+		'Registration failed. Please try again.'    => 'Rejestracja nie powiodła się. Spróbuj ponownie.',
 	),
 
 	'cs' => array(
@@ -319,6 +334,9 @@ return array(
 		'%d model saved'                            => 'Uložen model: %d',
 		'Your wishlist is saved in this browser. Sign in to keep it on your account.' => 'Seznam je uložen v tomto prohlížeči. Přihlaste se, aby zůstal ve vašem účtu.',
 		'Signed in as %s'                           => 'Přihlášen jako %s',
+		'Verification failed. Please refresh the page and try again.' => 'Ověření se nezdařilo. Obnovte stránku a zkuste to znovu.',
+		'Too many attempts. Please try again later.' => 'Příliš mnoho pokusů. Zkuste to později.',
+		'Registration failed. Please try again.'    => 'Registrace se nezdařila. Zkuste to znovu.',
 	),
 
 	'ro' => array(
@@ -370,6 +388,9 @@ return array(
 		'%d model saved'                            => '%d model salvat',
 		'Your wishlist is saved in this browser. Sign in to keep it on your account.' => 'Lista este salvată în acest browser. Conectează-te pentru a o păstra în cont.',
 		'Signed in as %s'                           => 'Conectat ca %s',
+		'Verification failed. Please refresh the page and try again.' => 'Verificarea a eșuat. Reîmprospătează pagina și încearcă din nou.',
+		'Too many attempts. Please try again later.' => 'Prea multe încercări. Încearcă mai târziu.',
+		'Registration failed. Please try again.'    => 'Înregistrarea a eșuat. Încearcă din nou.',
 	),
 
 	'de' => array(
@@ -421,6 +442,9 @@ return array(
 		'%d model saved'                            => '%d Modell gespeichert',
 		'Your wishlist is saved in this browser. Sign in to keep it on your account.' => 'Ihre Merkliste ist in diesem Browser gespeichert. Melden Sie sich an, um sie im Konto zu behalten.',
 		'Signed in as %s'                           => 'Angemeldet als %s',
+		'Verification failed. Please refresh the page and try again.' => 'Verifizierung fehlgeschlagen. Bitte laden Sie die Seite neu und versuchen Sie es erneut.',
+		'Too many attempts. Please try again later.' => 'Zu viele Versuche. Bitte versuchen Sie es später erneut.',
+		'Registration failed. Please try again.'    => 'Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.',
 	),
 
 	'fr' => array(
@@ -472,6 +496,9 @@ return array(
 		'%d model saved'                            => '%d modèle enregistré',
 		'Your wishlist is saved in this browser. Sign in to keep it on your account.' => 'Votre liste est enregistrée dans ce navigateur. Connectez-vous pour la conserver dans votre compte.',
 		'Signed in as %s'                           => 'Connecté en tant que %s',
+		'Verification failed. Please refresh the page and try again.' => "La vérification a échoué. Actualisez la page et réessayez.",
+		'Too many attempts. Please try again later.' => 'Trop de tentatives. Veuillez réessayer plus tard.',
+		'Registration failed. Please try again.'    => "L'inscription a échoué. Veuillez réessayer.",
 	),
 
 	'nl' => array(
@@ -523,6 +550,9 @@ return array(
 		'%d model saved'                            => '%d model opgeslagen',
 		'Your wishlist is saved in this browser. Sign in to keep it on your account.' => 'Je verlanglijst is in deze browser opgeslagen. Log in om die in je account te bewaren.',
 		'Signed in as %s'                           => 'Ingelogd als %s',
+		'Verification failed. Please refresh the page and try again.' => 'Verificatie mislukt. Vernieuw de pagina en probeer het opnieuw.',
+		'Too many attempts. Please try again later.' => 'Te veel pogingen. Probeer het later opnieuw.',
+		'Registration failed. Please try again.'    => 'Registratie mislukt. Probeer het opnieuw.',
 	),
 
 	'it' => array(
@@ -574,5 +604,8 @@ return array(
 		'%d model saved'                            => '%d modello salvato',
 		'Your wishlist is saved in this browser. Sign in to keep it on your account.' => 'La tua lista è salvata in questo browser. Accedi per conservarla nel tuo account.',
 		'Signed in as %s'                           => 'Accesso come %s',
+		'Verification failed. Please refresh the page and try again.' => 'Verifica non riuscita. Aggiorna la pagina e riprova.',
+		'Too many attempts. Please try again later.' => 'Troppi tentativi. Riprova più tardi.',
+		'Registration failed. Please try again.'    => 'Registrazione non riuscita. Riprova.',
 	),
 );

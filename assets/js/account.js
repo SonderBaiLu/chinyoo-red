@@ -215,6 +215,36 @@
 		onWishClick(btn);
 	});
 
+	/* ---------- Turnstile（仅注册表单） ---------- */
+	// 面板默认 display:none，自动渲染在隐藏容器里不可靠，改为切到注册 Tab 时显式渲染。
+	var turnstileWidget = null;
+
+	function ensureTurnstile() {
+		if (!cfg.turnstileSiteKey) {
+			return;
+		}
+		var box = document.getElementById('ew-turnstile-register');
+		if (!box || !window.turnstile || turnstileWidget !== null) {
+			return;
+		}
+		try {
+			turnstileWidget = window.turnstile.render(box, {
+				sitekey: cfg.turnstileSiteKey,
+				language: cfg.turnstileLang || 'auto'
+			});
+		} catch (e) {
+			turnstileWidget = null;
+		}
+	}
+
+	function resetTurnstile() {
+		if (turnstileWidget !== null && window.turnstile) {
+			try {
+				window.turnstile.reset(turnstileWidget);
+			} catch (e) {}
+		}
+	}
+
 	/* ---------- Tab 切换 ---------- */
 	function activateTab(name) {
 		qsa('.account-tab').forEach(function (tab) {
@@ -225,6 +255,9 @@
 		qsa('.account-panel').forEach(function (panel) {
 			panel.classList.toggle('is-active', panel.id === 'panel-' + name);
 		});
+		if (name === 'register') {
+			ensureTurnstile();
+		}
 	}
 
 	qsa('.account-tab').forEach(function (tab) {
@@ -325,6 +358,7 @@
 			}).catch(function (err) {
 				feedback(registerForm, err.message || (i18n.error || 'Registration failed.'));
 				setBusy(registerForm, false);
+				resetTurnstile(); // token 一次性，失败后必须换新的
 			});
 		};
 
@@ -367,4 +401,10 @@
 
 	/* ---------- 启动 ---------- */
 	statePromise = fetchState();
+
+	// 如果直接落在注册面板（例如带 ?tab=register 或脚本主动切换），补一次渲染
+	var registerPanel = document.getElementById('panel-register');
+	if (registerPanel && registerPanel.classList.contains('is-active')) {
+		ensureTurnstile();
+	}
 })();

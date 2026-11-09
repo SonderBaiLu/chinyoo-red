@@ -194,6 +194,20 @@
 	font-size: var(--fs-xs);
 }
 
+/* 蜜罐：移出视口而非 display:none，机器人仍会填，真人看不到 */
+.account-hp {
+	position: absolute !important;
+	left: -9999px !important;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+}
+
+.account-turnstile {
+	margin: 4px 0 14px;
+	min-height: 65px; /* 预留高度，避免加载时表单跳动 */
+}
+
 .account-details {
 	margin: 4px 0 16px;
 	padding: 12px 14px;

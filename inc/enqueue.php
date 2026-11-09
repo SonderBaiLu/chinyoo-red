@@ -212,6 +212,9 @@ function ew_enqueue_assets() {
         'loginUrl'    => ew_account_page_url( 'login' ),
         'accountUrl'  => ew_account_page_url( 'account' ),
         'wishlistUrl' => ew_account_page_url( 'wishlist' ),
+        // Turnstile 显式渲染所需（未启用时为空，JS 直接跳过）
+        'turnstileSiteKey' => ( function_exists( 'ew_turnstile_enabled' ) && ew_turnstile_enabled() && defined( 'EW_TURNSTILE_SITE_KEY' ) ) ? EW_TURNSTILE_SITE_KEY : '',
+        'turnstileLang'    => function_exists( 'ew_turnstile_language' ) ? ew_turnstile_language() : 'auto',
         'i18n'        => array(
             'add'      => ew__( 'Add to Wishlist' ),
             'remove'   => ew__( 'Remove from Wishlist' ),
