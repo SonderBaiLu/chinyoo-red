@@ -45,6 +45,11 @@ if ( function_exists( 'wc_get_page_id' ) && wc_get_page_id( 'shop' ) ) {
 if ( ! $ew_foot_shop_url ) {
 	$ew_foot_shop_url = ew_page_url( 'product-categories' );
 }
+// pl/cs/ro 没有真正翻译的 WooCommerce shop 页：/{lang}/shop/ 实测 200，但归档为空（0 个产品）、
+// 带 noindex、且没有 canonical，点进去是个死胡同。改指本地产品总览页；en 维持原 shop 页。
+if ( function_exists( 'ew_url_is_local' ) && ! ew_url_is_local( $ew_foot_shop_url ) ) {
+	$ew_foot_shop_url = ew_page_url( 'product-categories' );
+}
 ?>
 </main><!-- .site-main -->
 
@@ -80,7 +85,10 @@ if ( ! $ew_foot_shop_url ) {
 				<h4 class="foot-col__title"><?php ew_esc_html_e('Solutions'); ?></h4>
 				<ul class="foot-col__list">
 					<?php foreach ( $ew_foot_scenarios as $ew_slug => $ew_sc ) : ?>
-						<li><a href="<?php echo esc_url( ew_scenario_url( $ew_slug ) ); ?>"><?php echo esc_html( $ew_sc['title'] ); ?></a></li>
+						<?php $ew_sc_url = ew_scenario_url( $ew_slug ); ?>
+						<?php if ( ! function_exists( 'ew_url_is_local' ) || ew_url_is_local( $ew_sc_url ) ) : ?>
+						<li><a href="<?php echo esc_url( $ew_sc_url ); ?>"><?php echo esc_html( $ew_sc['title'] ); ?></a></li>
+						<?php endif; ?>
 					<?php endforeach; ?>
 				</ul>
 			</div>
@@ -89,8 +97,12 @@ if ( ! $ew_foot_shop_url ) {
 			<div class="foot-col">
 				<h4 class="foot-col__title"><?php ew_esc_html_e('Services & Support'); ?></h4>
 				<ul class="foot-col__list">
+					<?php if ( ew_slug_is_local( 'downloads' ) ) : ?>
 					<li><a href="<?php echo esc_url( ew_page_url( 'downloads' ) ); ?>"><?php ew_esc_html_e('Downloads'); ?></a></li>
+					<?php endif; ?>
+					<?php if ( ew_slug_is_local( 'faqs' ) ) : ?>
 					<li><a href="<?php echo esc_url( ew_page_url( 'faqs' ) ); ?>"><?php ew_esc_html_e('FAQs'); ?></a></li>
+					<?php endif; ?>
 					<li><a href="<?php echo esc_url( ew_page_url( 'oem' ) ); ?>"><?php ew_esc_html_e('OEM / ODM'); ?></a></li>
 					<li><a href="<?php echo esc_url( ew_page_url( 'quote' ) ); ?>"><?php ew_esc_html_e('Where to Buy'); ?></a></li>
 					<li><a href="<?php echo esc_url( ew_page_url( 'contact-us' ) ); ?>"><?php ew_esc_html_e('Feedback'); ?></a></li>
@@ -101,9 +113,13 @@ if ( ! $ew_foot_shop_url ) {
 			<div class="foot-col">
 				<h4 class="foot-col__title"><?php ew_esc_html_e('Insights'); ?></h4>
 				<ul class="foot-col__list">
+					<?php if ( ew_slug_is_local( 'news' ) ) : ?>
 					<li><a href="<?php echo esc_url( ew_page_url( 'news' ) ); ?>"><?php ew_esc_html_e('News & Events'); ?></a></li>
+					<?php endif; ?>
 					<li><a href="<?php echo esc_url( $ew_foot_shop_url ); ?>"><?php ew_esc_html_e('New Products Launch'); ?></a></li>
+					<?php if ( ew_slug_is_local( 'news' ) ) : ?>
 					<li><a href="<?php echo esc_url( ew_page_url( 'news' ) ); ?>"><?php ew_esc_html_e('Blogs'); ?></a></li>
+					<?php endif; ?>
 				</ul>
 			</div>
 

@@ -23,6 +23,9 @@ require_once EW_THEME_DIR . '/inc/product-editor.php';
 require_once EW_THEME_DIR . '/inc/product-import.php';
 require_once EW_THEME_DIR . '/inc/turnstile.php';
 require_once EW_THEME_DIR . '/inc/inquiry-handler.php';
+require_once EW_THEME_DIR . '/inc/wishlist.php';       // 收藏（游客 cookie + 用户 meta）
+require_once EW_THEME_DIR . '/inc/account.php';        // 客户登录 / 注册 / 资料 AJAX
+require_once EW_THEME_DIR . '/inc/account-routes.php'; // /login/ /wishlist/ /account/ 路由 + 字符串翻译
 require_once EW_THEME_DIR . '/inc/chinyoo-filter.php';
 require_once EW_THEME_DIR . '/inc/scenarios.php';
 require_once EW_THEME_DIR . '/inc/scenario-content.php';
@@ -56,6 +59,47 @@ add_filter("body_class", function($classes) {
 // 不能直接用 home_url('/slug/')：Polylang 的 home_url 过滤只翻译"不带路径"的首页 URL，
 // 带路径的 home_url() 永远原样返回、不加语言前缀。要生成当前语言的页面/分类链接必须走 permalink。
 function ew_page_url( $slug ) {
+    $lang = function_exists( 'pll_current_language' ) ? pll_current_language() : 'en';
+    // 商品总览：pl/cs/ro 没有真正的本地 WooCommerce shop 页 —— /{lang}/shop/ 虽返回 200，
+    // 但归档为空、带 noindex、无 canonical、标题仍是英文 "Shop"。所以「商品」入口一律
+    // 改指本地产品总览页（produkty / produse），走下面的 $subs 表。
+    if ( 'shop' === $slug && in_array( $lang, array( 'pl', 'cs', 'ro' ), true ) ) {
+        $slug = 'product-categories';
+    }
+    // 没有对应译文的英文页：pl/cs/ro 换成本地等价页，别让入口把用户送回英文版。
+    // 例：/quote/ 英文询价页 → 本地「 kontakt/contact 」页（同一张询价表单）。
+    $subs = array(
+        'pl' => array( 'product-categories' => 'produkty', 'quote' => 'kontakt' ),
+        'cs' => array( 'product-categories' => 'produkty', 'quote' => 'kontakt' ),
+        'ro' => array( 'product-categories' => 'produse',  'quote' => 'contact' ),
+    );
+    if ( isset( $subs[ $lang ][ $slug ] ) ) {
+        // 不能只用 get_page_by_path：pl / cs / ro 有同名 slug（kontakt、oem-odm、produkty…），
+        // 会串到另一语言。ew_lang_page() 是 mu-plugin 里的按语言精确取页助手。
+        $sub  = $subs[ $lang ][ $slug ];
+        $page = function_exists( 'ew_lang_page' ) ? ew_lang_page( $sub, $lang ) : null;
+        if ( ! $page ) {
+            $cand = get_posts( array(
+                'name'             => $sub,
+                'post_type'        => 'page',
+                'post_status'      => 'publish',
+                'numberposts'      => 10,
+                'suppress_filters' => true,
+            ) );
+            foreach ( $cand as $c ) {
+                if ( ! function_exists( 'pll_get_post_language' ) || pll_get_post_language( $c->ID ) === $lang ) {
+                    $page = $c;
+                    break;
+                }
+            }
+        }
+        if ( $page ) {
+            $url = get_permalink( $page );
+            if ( $url ) {
+                return $url;
+            }
+        }
+    }
     if ( function_exists( 'pll_get_post' ) ) {
         $en = get_page_by_path( $slug ); // 默认语言页（slug 跨语言一致）
         if ( $en ) {
@@ -124,6 +168,33 @@ function ew_post_url( $slug, $post_type = 'post' ) {
     return home_url( '/' . $slug . '/' );
 }
 
+/**
+ * 这个 URL 是否停留在当前语言里（pl / cs / ro 用子目录，其余语言一律放行）。
+ * 用来在导航里剔除"没有译文、点进去会掉回英文"的入口。
+ */
+function ew_url_is_local( $url ) {
+    if ( ! function_exists( 'pll_current_language' ) ) {
+        return true;
+    }
+    $lang = pll_current_language();
+    if ( ! in_array( $lang, array( 'pl', 'cs', 'ro' ), true ) ) {
+        return true;
+    }
+    $path = wp_parse_url( $url, PHP_URL_PATH );
+    if ( ! $path ) {
+        return true; // 纯锚点（#inquiry）等
+    }
+    return 0 === strpos( $path, '/' . $lang . '/' );
+}
+
+/** 按 slug 判断入口是否停留在当前语言（footer 用）。 */
+function ew_slug_is_local( $slug ) {
+    if ( ! function_exists( 'ew_url_is_local' ) ) {
+        return true;
+    }
+    return ew_url_is_local( ew_page_url( $slug ) );
+}
+
 // --- Header nav fallback（唯一导航渲染路径） ---
 // 说明：Polylang 的菜单模型是"每语言一个菜单"，需在后台按语言建菜单并填入 nav_menus 选项。
 // 本主题刻意不用这套——菜单项与 URL 都是按语言硬编码生成的（与 footer 一致），
@@ -172,6 +243,26 @@ function ew_header_menu_fallback( $args = array() ) {
             'url'   => ew_page_url( 'contact-us' ),
         ),
     );
+    // pl / cs / ro 还没有译文的英文页（Solutions、Support、Downloads、FAQs、News…）：
+    // 留着这些入口只会把本地用户送回英文版，所以整条隐藏；译好之后加进 $subs 或
+    // 建立对应译文页，它们会自动回来。
+    if ( function_exists( 'ew_url_is_local' ) ) {
+        foreach ( $items as $k => $it ) {
+            $keep_sub = array();
+            foreach ( (array) ( isset( $it['sub'] ) ? $it['sub'] : array() ) as $sub ) {
+                if ( ew_url_is_local( $sub[1] ) ) { $keep_sub[] = $sub; }
+            }
+            if ( ! empty( $it['sub'] ) ) { $items[ $k ]['sub'] = $keep_sub; }
+            if ( ! ew_url_is_local( $it['url'] ) && empty( $keep_sub ) ) {
+                unset( $items[ $k ] );
+            } elseif ( ! ew_url_is_local( $it['url'] ) && ! empty( $keep_sub ) ) {
+                // 父项本身没有译文、但还有本地子项（Services & Support → OEM/ODM）：
+                // 父项直接落到第一个本地子项，别让整条主链把用户送回英文。
+                $items[ $k ]['url'] = $keep_sub[0][1];
+            }
+        }
+        $items = array_values( $items );
+    }
     echo '<ul class="' . esc_attr( $menu_class ) . '">';
     foreach ( $items as $it ) {
         $cls = array( 'menu-item' );
@@ -1044,6 +1135,9 @@ function ew_build_mega_tree() {
                 'posts_per_page'   => 24,
                 'orderby'          => 'menu_order title',
                 'order'            => 'ASC',
+                // 显式锁语言：pl/cs/ro 分类里还挂着早期批量复制过来的英文产品，
+                // 不锁的话大菜单会把英文货排到前面。
+                'lang'             => function_exists( 'pll_current_language' ) ? pll_current_language() : 'en',
                 'tax_query'        => array( array(
                     'taxonomy' => 'product_cat',
                     'field'    => 'term_id',

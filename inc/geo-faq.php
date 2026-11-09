@@ -170,7 +170,7 @@ function ew_geo_faq_dict() {
 	}
 	static $dicts = null;
 	if ( null === $dicts ) {
-		$dicts = array( 'zh' => array(), 'es' => array(), 'ru' => array(), 'ar' => array() );
+		$dicts = array( 'zh' => array(), 'es' => array(), 'ru' => array(), 'ar' => array(), 'pl' => array(), 'cs' => array(), 'ro' => array() );
 		foreach ( array_keys( $dicts ) as $l ) {
 			$file = __DIR__ . '/geo-faq-strings-' . $l . '.php';
 			if ( file_exists( $file ) ) {

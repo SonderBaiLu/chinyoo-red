@@ -569,6 +569,13 @@ while ( have_posts() ) :
                        data-model="<?php echo esc_attr( $current_sku ); ?>">
                         <?php ew_esc_html_e('Get a Quote'); ?>
                     </a>
+                    <button type="button" class="btn btn--outline btn--lg btn--wish js-wish"
+                            data-product-id="<?php echo esc_attr( (string) get_the_ID() ); ?>"
+                            aria-pressed="false"
+                            aria-label="<?php ew_esc_attr_e('Add to Wishlist'); ?>">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 21s-7.5-4.7-9.5-9C1 8.5 3 5 6.5 5c2 0 3.5 1 4.5 2.5C12 6 13.5 5 15.5 5 19 5 21 8.5 20.5 12c-2 4.3-8.5 9-8.5 9z"></path></svg>
+                        <span class="js-wish-label"><?php ew_esc_html_e('Add to Wishlist'); ?></span>
+                    </button>
                 </div>
 
             </div>

@@ -40,13 +40,25 @@
 		</button>
 
 		<div class="hdr-actions">
-			<a class="hdr-ic" href="<?php echo esc_url( ew_page_url( 'product-categories' ) ); ?>" title="<?php ew_esc_attr_e('Wishlist'); ?>">
+			<a class="hdr-ic" href="<?php echo esc_url( ew_account_page_url( 'wishlist' ) ); ?>" title="<?php ew_esc_attr_e('Wishlist'); ?>">
 				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 21s-7.5-4.7-9.5-9C1 8.5 3 5 6.5 5c2 0 3.5 1 4.5 2.5C12 6 13.5 5 15.5 5 19 5 21 8.5 20.5 12c-2 4.3-8.5 9-8.5 9z"></path></svg>
 				<span><?php ew_esc_html_e('Wishlist'); ?></span>
+				<span class="hdr-ic__count" data-wish-count hidden>0</span>
 			</a>
-			<a class="hdr-ic" href="<?php echo esc_url( wp_login_url() ); ?>">
+			<?php
+			// 登录态由 JS 切换（页面可整页缓存，服务端只输出匿名默认态）
+			?>
+			<a class="hdr-ic js-hdr-guest" href="<?php echo esc_url( ew_account_page_url( 'login' ) ); ?>">
 				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"></path></svg>
 				<span><?php ew_esc_html_e('Sign In / Register'); ?></span>
+			</a>
+			<a class="hdr-ic js-hdr-user" href="<?php echo esc_url( ew_account_page_url( 'account' ) ); ?>" hidden>
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"></path></svg>
+				<span class="hdr-ic__name js-hdr-name"><?php ew_esc_html_e('Account'); ?></span>
+			</a>
+			<a class="hdr-ic js-hdr-signout" href="#" hidden>
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"></path></svg>
+				<span><?php ew_esc_html_e('Sign Out'); ?></span>
 			</a>
 			<div class="lang-switcher" id="lang-switcher">
 				<?php
@@ -164,6 +176,23 @@
 			<?php get_template_part( 'template-parts/sidebar-categories', null, array( 'current_cat_id' => $ew_hdr_cat ) ); ?>
 		</div>
 		<a class="mobile-nav-quote" href="<?php echo esc_url( ew_page_url( 'quote' ) ); ?>"><?php ew_esc_html_e('Get a Quote'); ?></a>
+
+		<?php // 移动端账户入口（桌面 .hdr-ic 在 992px 以下被隐藏） ?>
+		<div class="mobile-nav-account">
+			<a class="mobile-nav-account__link" href="<?php echo esc_url( ew_account_page_url( 'wishlist' ) ); ?>">
+				<?php ew_esc_html_e('Wishlist'); ?>
+				<span class="hdr-ic__count" data-wish-count hidden>0</span>
+			</a>
+			<a class="mobile-nav-account__link js-hdr-guest" href="<?php echo esc_url( ew_account_page_url( 'login' ) ); ?>">
+				<?php ew_esc_html_e('Sign In / Register'); ?>
+			</a>
+			<a class="mobile-nav-account__link js-hdr-user" href="<?php echo esc_url( ew_account_page_url( 'account' ) ); ?>" hidden>
+				<span class="js-hdr-name"><?php ew_esc_html_e('Account'); ?></span>
+			</a>
+			<a class="mobile-nav-account__link js-hdr-signout" href="#" hidden>
+				<?php ew_esc_html_e('Sign Out'); ?>
+			</a>
+		</div>
 	</aside>
 </header>
 

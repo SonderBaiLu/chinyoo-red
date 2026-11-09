@@ -81,6 +81,13 @@ if ( ! $img_url && defined( 'EW_THEME_URI' ) ) {
 ?>
 <article class="catalog-card">
  <?php if ( ! empty( $args['badge'] ) ) : ?><span class="catalog-card__badge"><?php echo esc_html( $args['badge'] ); ?></span><?php endif; ?>
+ <button type="button" class="catalog-card__wish js-wish"
+  data-product-id="<?php echo esc_attr( (string) $pid ); ?>"
+  aria-pressed="false"
+  aria-label="<?php ew_esc_attr_e( 'Add to Wishlist' ); ?>"
+  title="<?php ew_esc_attr_e( 'Add to Wishlist' ); ?>">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 21s-7.5-4.7-9.5-9C1 8.5 3 5 6.5 5c2 0 3.5 1 4.5 2.5C12 6 13.5 5 15.5 5 19 5 21 8.5 20.5 12c-2 4.3-8.5 9-8.5 9z"></path></svg>
+ </button>
  <a class="catalog-card__image" href="<?php echo esc_url( $perm ); ?>" aria-label="<?php echo esc_attr( $title ); ?>">
   <img src="<?php echo esc_url( $img_url ); ?>" alt="<?php echo esc_attr( $title ); ?>" loading="lazy" width="400" height="400">
  </a>

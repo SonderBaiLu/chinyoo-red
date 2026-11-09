@@ -171,8 +171,8 @@
             if (featNext) { featNext.addEventListener('click', function () { featGrid.scrollBy({ left: featStep(), behavior: 'smooth' }); }); }
         }
 
-        // ---- 卡片对比/收藏图标（本地视觉态） ----
-        document.querySelectorAll('.pitem__tool').forEach(function (btn) {
+        // ---- 卡片对比图标（收藏交给 assets/js/account.js） ----
+        document.querySelectorAll('.js-compare').forEach(function (btn) {
             btn.addEventListener('click', function (e) {
                 e.preventDefault();
                 btn.classList.toggle('on');

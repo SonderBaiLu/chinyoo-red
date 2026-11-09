@@ -94,7 +94,10 @@ function ew_enqueue_assets() {
     if ( $catalog_page && function_exists( 'pll_get_post_translations' ) ) {
         $catalog_ids = array_merge( $catalog_ids, array_values( pll_get_post_translations( $catalog_page->ID ) ) );
     }
-    if ( ( $catalog_ids && is_page( $catalog_ids ) ) || is_page_template( 'page-product-categories.php' ) || is_post_type_archive( 'product' ) || is_tax( array( 'product_cat', 'product_tag' ) ) ) {
+    // 收藏页复用目录页的商品卡（.catalog-grid / .catalog-card），必须一起带上 catalog.css
+    $ew_is_account_view = (bool) get_query_var( 'ew_account_view' );
+
+    if ( ( $catalog_ids && is_page( $catalog_ids ) ) || is_page_template( 'page-product-categories.php' ) || is_post_type_archive( 'product' ) || is_tax( array( 'product_cat', 'product_tag' ) ) || $ew_is_account_view ) {
         wp_enqueue_style( 'ew-catalog', EW_THEME_URI . '/assets/css/catalog.css', array( 'ew-homepage' ), (string) filemtime( "$dir/assets/css/catalog.css" ) );
         wp_enqueue_script( 'ew-catalog', EW_THEME_URI . '/assets/js/catalog.js', array(), (string) filemtime( "$dir/assets/js/catalog.js" ), true );
     }
@@ -182,6 +185,43 @@ function ew_enqueue_assets() {
         'nonce'    => wp_create_nonce( 'ew_inquiry_nonce' ),
         'iti_utils_url' => EW_THEME_URI . '/assets/vendor/intl-tel-input/js/utils.js',
         'iti_initial_country' => isset( $ew_phone_countries[ $ew_current_lang ] ) ? $ew_phone_countries[ $ew_current_lang ] : 'us',
+    ));
+
+    // --- 客户账户 / 收藏（全站，因为商品卡带有收藏按钮） ---
+    // 注意：这里不注入 nonce —— 页面会被整页缓存，nonce 必须由
+    // ew_account_state 这个 no-store 接口现下发（见 assets/js/account.js）。
+    $v_account_css = ($t = filemtime( "$dir/assets/css/account.css" )) === false ? EW_THEME_VERSION : (string) $t;
+    wp_enqueue_style(
+        'ew-account',
+        EW_THEME_URI . '/assets/css/account.css',
+        array( 'ew-main-style' ),
+        $v_account_css
+    );
+
+    $v_account_js = ($t = filemtime( "$dir/assets/js/account.js" )) === false ? EW_THEME_VERSION : (string) $t;
+    wp_enqueue_script(
+        'ew-account',
+        EW_THEME_URI . '/assets/js/account.js',
+        array(),
+        $v_account_js,
+        true
+    );
+
+    wp_localize_script( 'ew-account', 'ew_account', array(
+        'ajax_url'    => admin_url( 'admin-ajax.php' ),
+        'loginUrl'    => ew_account_page_url( 'login' ),
+        'accountUrl'  => ew_account_page_url( 'account' ),
+        'wishlistUrl' => ew_account_page_url( 'wishlist' ),
+        'i18n'        => array(
+            'add'      => ew__( 'Add to Wishlist' ),
+            'remove'   => ew__( 'Remove from Wishlist' ),
+            'added'    => ew__( 'Added to wishlist' ),
+            'removed'  => ew__( 'Removed from wishlist' ),
+            'saved'    => ew__( 'Saved successfully.' ),
+            'signedIn' => ew__( 'Signed in successfully.' ),
+            'account'  => ew__( 'Account' ),
+            'error'    => ew__( 'Something went wrong. Please try again.' ),
+        ),
     ));
 }
 add_action( 'wp_enqueue_scripts', 'ew_enqueue_assets' );

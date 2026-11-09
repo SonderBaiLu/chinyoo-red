@@ -65,15 +65,31 @@ function ew_lang_flag( $lang ) {
 	if ( is_array( $lang ) ) {
 		$flag = isset( $lang['flag'] ) ? $lang['flag'] : '';
 		$url  = is_array( $flag ) ? ( isset( $flag['url'] ) ? $flag['url'] : '' ) : (string) $flag;
-		if ( '' !== $url ) {
-			// .../flags/cz.png → cz
-			$code = strtolower( (string) pathinfo( (string) parse_url( $url, PHP_URL_PATH ), PATHINFO_FILENAME ) );
+
+		// 只认 .../flags/xx.png|svg 这类文件地址。
+		// 线上 mu-plugin 会把 flag 换成 data:image/png;base64 内联图，
+		// 那种情况下 parse_url 取到的是整段 base64，必须忽略并回退到语言 slug。
+		if ( '' !== $url && preg_match( '#/flags/([a-z]{2,5})\.(?:png|svg|jpe?g)$#i', $url, $m ) ) {
+			$code = strtolower( $m[1] );
 		}
 		if ( '' === $code && ! empty( $lang['slug'] ) ) {
 			$code = strtolower( (string) $lang['slug'] );
 		}
 	} else {
 		$code = strtolower( (string) $lang );
+	}
+
+	// 语言 slug 与国家代码不一致时对齐（Polylang 的旗标按国家存）。
+	$aliases = array(
+		'en'    => 'us',
+		'zh'    => 'cn',
+		'zh-tw' => 'tw',
+		'zh_tw' => 'tw',
+		'ar'    => 'sa',
+		'cs'    => 'cz',
+	);
+	if ( isset( $aliases[ $code ] ) ) {
+		$code = $aliases[ $code ];
 	}
 
 	$flags = ew_lang_flags();
@@ -95,6 +111,12 @@ function ew_lang_flags() {
 	$open = '<svg class="lang-switcher__flag" viewBox="0 0 24 18" aria-hidden="true" focusable="false">';
 	$end  = '</svg>';
 	$star = 'M0 -1 L0.2245 -0.309 L0.951 -0.309 L0.363 0.118 L0.588 0.809 L0 0.382 L-0.588 0.809 L-0.363 0.118 L-0.951 -0.309 L-0.2245 -0.309 Z';
+
+	// 青天白日：12 道光芒（18px 下只求轮廓可辨）
+	$tw_rays = '';
+	for ( $i = 0; $i < 12; $i++ ) {
+		$tw_rays .= '<path d="M6 0.75 L6.52 2.95 L5.48 2.95 Z" transform="rotate(' . ( $i * 30 ) . ' 6 4.5)"/>';
+	}
 
 	$flags = array(
 		// English → Polylang flag "us": 13 stripes + union field.
@@ -143,6 +165,39 @@ function ew_lang_flags() {
 			. '<path d="' . $star . '" transform="translate(9.8 6.5) scale(.55)"/>'
 			. '<path d="' . $star . '" transform="translate(8.4 8.3) scale(.55)"/>'
 			. '</g>'
+			. $end,
+		// 繁體中文（台灣）
+		'tw'        => $open
+			. '<rect width="24" height="18" fill="#fe0000"/>'
+			. '<rect width="12" height="9" fill="#000095"/>'
+			. '<g fill="#fff">'
+			. $tw_rays
+			. '<circle cx="6" cy="4.5" r="2.05"/>'
+			. '</g>'
+			. $end,
+		// Deutsch
+		'de'        => $open
+			. '<rect width="24" height="6" fill="#000"/>'
+			. '<rect y="6" width="24" height="6" fill="#dd0000"/>'
+			. '<rect y="12" width="24" height="6" fill="#ffce00"/>'
+			. $end,
+		// Français
+		'fr'        => $open
+			. '<rect width="8" height="18" fill="#0055a4"/>'
+			. '<rect x="8" width="8" height="18" fill="#fff"/>'
+			. '<rect x="16" width="8" height="18" fill="#ef4135"/>'
+			. $end,
+		// Nederlands
+		'nl'        => $open
+			. '<rect width="24" height="6" fill="#ae1c28"/>'
+			. '<rect y="6" width="24" height="6" fill="#fff"/>'
+			. '<rect y="12" width="24" height="6" fill="#21468b"/>'
+			. $end,
+		// Italiano
+		'it'        => $open
+			. '<rect width="8" height="18" fill="#009246"/>'
+			. '<rect x="8" width="8" height="18" fill="#fff"/>'
+			. '<rect x="16" width="8" height="18" fill="#ce2b37"/>'
 			. $end,
 		// Español
 		'es'        => $open
