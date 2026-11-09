@@ -22,11 +22,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * 发送一条 markdown 消息到钉钉群机器人。失败只记日志，不影响业务流程。
  *
- * @param string $title 消息标题（显示在钉钉通知卡片上）
- * @param string $text  markdown 正文
- * @return bool 是否发送成功
+ * @param string $title    消息标题（显示在钉钉通知卡片上）
+ * @param string $text     markdown 正文
+ * @param bool   $blocking 是否等待响应；收藏这类高频动作可传 false 避免拖慢前端
+ * @return bool 是否发送成功（非阻塞模式下始终返回 true）
  */
-function ew_dingtalk_post( $title, $text ) {
+function ew_dingtalk_post( $title, $text, $blocking = true ) {
 	$webhook = defined( 'CHINYOO_DINGTALK_WEBHOOK' ) && CHINYOO_DINGTALK_WEBHOOK ? CHINYOO_DINGTALK_WEBHOOK : '';
 	if ( empty( $webhook ) ) {
 		return false; // 未配置，静默跳过
@@ -54,11 +55,16 @@ function ew_dingtalk_post( $title, $text ) {
 	$response = wp_remote_post(
 		$url,
 		array(
-			'body'    => wp_json_encode( $payload ),
-			'headers' => array( 'Content-Type' => 'application/json' ),
-			'timeout' => 5,
+			'body'     => wp_json_encode( $payload ),
+			'headers'  => array( 'Content-Type' => 'application/json' ),
+			'timeout'  => $blocking ? 5 : 0.01,
+			'blocking' => $blocking,
 		)
 	);
+
+	if ( ! $blocking ) {
+		return true; // 已发出，不等结果
+	}
 
 	if ( is_wp_error( $response ) ) {
 		error_log( '[ew-notify] DingTalk push failed: ' . $response->get_error_message() );
@@ -158,4 +164,96 @@ function ew_notify_new_registration( $user_id, $data ) {
 	 * @param array $data
 	 */
 	do_action( 'ew_after_new_registration_notify', $user_id, $data );
+}
+
+/**
+ * 客户身份的一行描述："名字 <邮箱>"，找不到用户时返回邮箱占位。
+ *
+ * @param int $user_id
+ * @return string
+ */
+function ew_notify_user_label( $user_id ) {
+	$user = get_userdata( absint( $user_id ) );
+	if ( ! $user ) {
+		return '#' . absint( $user_id );
+	}
+	$name = trim( (string) $user->display_name );
+	return ( '' !== $name ? $name . ' ' : '' ) . '<' . $user->user_email . '>';
+}
+
+/**
+ * 客户资料更新通知（钉钉）。
+ *
+ * @param int   $user_id
+ * @param array $changes [ ['field'=>'phone','old'=>'...','new'=>'...'], ... ]
+ */
+function ew_notify_profile_update( $user_id, $changes ) {
+	$changes = is_array( $changes ) ? $changes : array();
+	if ( empty( $changes ) ) {
+		return; // 没有任何实际变化，不打扰
+	}
+
+	$labels = array(
+		'phone'     => '手机号',
+		'company'   => '公司',
+		'country'   => '国家',
+		'state'     => '州/省',
+		'city'      => '城市',
+		'address_1' => '地址 1',
+		'address_2' => '地址 2',
+		'postcode'  => '邮编',
+	);
+
+	$lines = '';
+	foreach ( $changes as $item ) {
+		$field = isset( $item['field'] ) ? (string) $item['field'] : '';
+		if ( '' === $field ) {
+			continue;
+		}
+		$label = isset( $labels[ $field ] ) ? $labels[ $field ] : $field;
+		$old   = isset( $item['old'] ) && '' !== $item['old'] ? $item['old'] : '（空）';
+		$new   = isset( $item['new'] ) && '' !== $item['new'] ? $item['new'] : '（空）';
+		$lines .= '**' . $label . '：** ' . $old . ' → ' . $new . "\n";
+	}
+	if ( '' === $lines ) {
+		return;
+	}
+
+	$content = '### ✏️ 新客户资料更新' . "\n\n"
+		. '**客户：** ' . ew_notify_user_label( $user_id ) . "\n\n"
+		. $lines
+		. "\n" . '**时间：** ' . current_time( 'Y-m-d H:i:s' ) . "\n"
+		. '**后台：** ' . admin_url( 'user-edit.php?user_id=' . absint( $user_id ) );
+
+	ew_dingtalk_post( '新客户资料更新', $content );
+	do_action( 'ew_after_profile_update_notify', $user_id, $changes );
+}
+
+/**
+ * 客户收藏商品通知（钉钉）。只通知「新增收藏」，取消收藏不打扰。
+ *
+ * @param int $user_id
+ * @param int $product_id
+ */
+function ew_notify_wishlist_add( $user_id, $product_id ) {
+	$user_id    = absint( $user_id );
+	$product_id = absint( $product_id );
+	if ( ! $user_id || ! $product_id ) {
+		return;
+	}
+
+	$title_text = get_the_title( $product_id );
+	$sku        = (string) get_post_meta( $product_id, '_sku', true );
+	$link       = admin_url( 'post.php?post=' . $product_id . '&action=edit' );
+
+	$content = '### ❤️ 新客户收藏商品' . "\n\n"
+		. '**客户：** ' . ew_notify_user_label( $user_id ) . "\n"
+		. '**商品：** ' . ( '' !== $title_text ? $title_text : '#' . $product_id ) . "\n"
+		. ( '' !== $sku ? '**型号：** ' . $sku . "\n" : '' )
+		. "\n" . '**时间：** ' . current_time( 'Y-m-d H:i:s' ) . "\n"
+		. '**后台：** ' . $link;
+
+	// 收藏是高频动作，非阻塞发送，避免拖慢前端响应
+	ew_dingtalk_post( '新客户收藏商品', $content, false );
+	do_action( 'ew_after_wishlist_notify', $user_id, $product_id );
 }

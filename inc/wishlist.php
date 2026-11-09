@@ -154,6 +154,11 @@ function ew_ajax_wishlist_toggle() {
 	}
 	ew_wishlist_set( $ids );
 
+	// 新增收藏时通知站点负责人（游客没有身份，只记录已登录客户）
+	if ( ! $has && is_user_logged_in() ) {
+		ew_notify_wishlist_add( get_current_user_id(), $pid );
+	}
+
 	nocache_headers();
 	wp_send_json_success(
 		array(

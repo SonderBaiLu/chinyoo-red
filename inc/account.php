@@ -335,13 +335,30 @@ function ew_ajax_account_profile() {
 		$data['phone'] = $phone;
 	}
 
+	$before = ew_account_get_profile( $user_id );
+
 	ew_account_save_profile( $user_id, $data );
+
+	// 有实际变化才通知（避免空保存也推送）
+	$after   = ew_account_get_profile( $user_id );
+	$changes = array();
+	foreach ( $after as $field => $new_value ) {
+		$old_value = isset( $before[ $field ] ) ? $before[ $field ] : '';
+		if ( $old_value !== $new_value ) {
+			$changes[] = array(
+				'field' => $field,
+				'old'   => $old_value,
+				'new'   => $new_value,
+			);
+		}
+	}
+	ew_notify_profile_update( $user_id, $changes );
 
 	nocache_headers();
 	wp_send_json_success(
 		array(
 			'message' => ew__( 'Saved successfully.' ),
-			'profile' => ew_account_get_profile( $user_id ),
+			'profile' => $after,
 		)
 	);
 }
