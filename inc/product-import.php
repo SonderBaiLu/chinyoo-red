@@ -70,7 +70,7 @@ function ew_import_attach_image( $local_path, $file_name, $post_id = 0, $role = 
 }
 
 /* ---------- 工具：按文件名归类 ----------
-   返回：'main' | array('gallery', n) | array('scene', n) | array('detail', 'en'|'cn'|'both') | null（null→画廊兜底）。 */
+   返回：'main' | array('gallery', n) | array('scene', n) | array('detail', language code|'both') | null（null→画廊兜底）。 */
 function ew_import_classify( $file_name ) {
     $base = pathinfo( $file_name, PATHINFO_FILENAME );
     $base = preg_replace( '/\s+/u', ' ', trim( (string) $base ) );
@@ -88,11 +88,12 @@ function ew_import_classify( $file_name ) {
     if ( ! $is_detail && preg_match( '/product[_\-\s]?detail/i', $base ) ) { $is_detail = true; }
 
     if ( $is_detail ) {
-        $lang = 'both';
-        if ( preg_match( '/英文|english|(?<![a-z])en(?![a-z])|en版/i', $base ) ) {
-            $lang = 'en';
-        } elseif ( preg_match( '/中文|中国|简体|chinese|(?<![a-z])cn(?![a-z])|(?<![a-z])zh(?![a-z])|中文版/i', $base ) ) {
-            $lang = 'cn';
+        $lang = 'both'; // Preserve the legacy convention for unlabelled files.
+        $aliases = array( 'en' => '英文|english', 'cn' => '中文|中国|简体|chinese|(?<![a-z])zh(?:[-_]cn)?(?![a-z])', 'pl' => '波兰语|polish', 'cs' => '捷克语|czech', 'ro' => '罗马尼亚语|romanian', 'de' => '德语|german', 'fr' => '法语|french', 'nl' => '荷兰语|dutch', 'it' => '意大利语|italian', 'ko' => '韩语|韩文|korean', 'ja' => '日语|日文|japanese', 'es' => '西班牙语|spanish', 'ru' => '俄语|russian', 'ar' => '阿拉伯语|arabic' );
+        foreach ( ew_product_languages() as $key => $language ) {
+            $pattern = '(?<![a-z])' . preg_quote( $key, '/' ) . '(?![a-z])';
+            if ( isset( $aliases[ $key ] ) ) { $pattern .= '|' . $aliases[ $key ]; }
+            if ( preg_match( '/' . $pattern . '/iu', $base ) ) { $lang = $key; break; }
         }
         return array( 'detail', $lang );
     }
@@ -485,6 +486,9 @@ function ew_total_product_count() {
 
 /* 当前语言的 /shop/ 地址（WooCommerce shop 页没有 Polylang 翻译时用语言前缀兜底） */
 function ew_shop_url() {
+    if ( function_exists( 'pll_current_language' ) && in_array( pll_current_language(), array( 'pl', 'cs', 'ro', 'de', 'fr', 'nl', 'it', 'ja', 'ko' ), true ) ) {
+        return ew_page_url( 'product-categories' );
+    }
     $shop_id = function_exists( 'wc_get_page_id' ) ? (int) wc_get_page_id( 'shop' ) : 0;
     $lang    = function_exists( 'pll_current_language' ) ? pll_current_language() : '';
     if ( $shop_id && $lang && function_exists( 'pll_get_post' ) ) {
@@ -596,6 +600,11 @@ function ew_product_sync_translations( $product_id ) {
         // 图片、参数、详情、首页推荐等共用数据
         foreach ( $meta_keys as $key ) {
             $value = get_post_meta( $product_id, $key, true );
+            // Preserve independently translated text when saving the source product.
+            if ( in_array( $key, array( '_model_specs', '_model_features', '_model_applications', '_packaging' ), true ) ) {
+                $translated_value = get_post_meta( $trans_id, $key, true );
+                if ( '' !== $translated_value && null !== $translated_value && $translated_value !== $value ) { continue; }
+            }
             if ( '' === $value || null === $value ) { delete_post_meta( $trans_id, $key ); }
             else { update_post_meta( $trans_id, $key, wp_slash( $value ) ); }
         }
@@ -607,9 +616,9 @@ function ew_product_sync_translations( $product_id ) {
         $mapped = array();
         foreach ( $source_terms as $term_id ) {
             $t = function_exists( 'pll_get_term' ) ? pll_get_term( $term_id, $target ) : 0;
-            $mapped[] = $t ? (int) $t : (int) $term_id;
+            if ( $t ) { $mapped[] = (int) $t; }
         }
-        wp_set_object_terms( $trans_id, array_values( array_unique( array_filter( $mapped ) ) ), 'product_cat' );
+        if ( $mapped || ! $source_terms ) { wp_set_object_terms( $trans_id, array_values( array_unique( $mapped ) ), 'product_cat' ); }
 
         $translations[ $target ] = $trans_id;
     }
@@ -725,16 +734,14 @@ function ew_import_one_folder( $dir, $folder_name, $options ) {
     $main       = array();
     $gallery    = array();
     $scene      = array();
-    $detail_en  = array();
-    $detail_cn  = array();
+    $detail_files = array();
 
     foreach ( $files as $full ) {
         $cls = ew_import_classify( basename( $full ) );
         if ( 'main' === $cls ) {
             $main[] = $full;
         } elseif ( is_array( $cls ) && 'detail' === $cls[0] ) {
-            if ( 'en' === $cls[1] || 'both' === $cls[1] ) { $detail_en[] = $full; }
-            if ( 'cn' === $cls[1] || 'both' === $cls[1] ) { $detail_cn[] = $full; }
+            foreach ( 'both' === $cls[1] ? array( 'en', 'cn' ) : array( $cls[1] ) as $lang ) { $detail_files[ $lang ][] = $full; }
         } elseif ( is_array( $cls ) && 'scene' === $cls[0] ) {
             $scene[ $cls[1] ][] = $full;
         } elseif ( is_array( $cls ) && 'gallery' === $cls[0] ) {
@@ -748,7 +755,7 @@ function ew_import_one_folder( $dir, $folder_name, $options ) {
     ksort( $gallery );
     ksort( $scene );
 
-    if ( empty( $main ) && empty( $gallery ) && empty( $scene ) && empty( $detail_en ) && empty( $detail_cn ) ) {
+    if ( empty( $main ) && empty( $gallery ) && empty( $scene ) && empty( $detail_files ) ) {
         return array( 'name' => $folder_name, 'ok' => false, 'msg' => '文件夹里没有可用图片', 'url' => '' );
     }
 
@@ -756,7 +763,7 @@ function ew_import_one_folder( $dir, $folder_name, $options ) {
     foreach ( $gallery as $group ) { $gallery_total += count( $group ); }
     $scene_total = 0;
     foreach ( $scene as $group ) { $scene_total += count( $group ); }
-    $summary = sprintf( '主图 %d · 画廊 %d · 详情 en %d / cn %d · 场景 %d', count( $main ), $gallery_total, count( $detail_en ), count( $detail_cn ), $scene_total );
+    $summary = sprintf( '主图 %d · 画廊 %d · 详情 %d 种语言 · 场景 %d', count( $main ), $gallery_total, count( $detail_files ), $scene_total );
 
     // 身份以本地核对表为基础；分类.txt 始终可以显式覆盖。
     $identity = ew_import_product_identity( $dir, $folder_name );
@@ -886,25 +893,18 @@ function ew_import_one_folder( $dir, $folder_name, $options ) {
         update_post_meta( $prod_id, '_model_detail_extras', wp_json_encode( $detail_extras ) );
     }
 
-    // 详情长图：按语言分别入库（en / cn）
-    $detail_map = array();
-    $de_ids = array();
+    // Replace only the languages supplied by this import; preserve existing translations.
+    $detail_map = ew_product_meta_map( $prod_id, '_model_detail_images' );
     $detail_ids_by_path = array();
-    foreach ( $detail_en as $d ) {
-        $aid = ew_import_attach_image( $d, $folder_name . '-详细参数图-en', $prod_id, 'detail' );
-        if ( $aid ) { $de_ids[] = $aid; $detail_ids_by_path[ $d ] = $aid; }
+    foreach ( $detail_files as $lang => $paths ) {
+        $ids = array();
+        foreach ( $paths as $path ) {
+            $aid = isset( $detail_ids_by_path[ $path ] ) ? $detail_ids_by_path[ $path ] : ew_import_attach_image( $path, $folder_name . '-详细参数图-' . $lang, $prod_id, 'detail' );
+            if ( $aid ) { $ids[] = $aid; $detail_ids_by_path[ $path ] = $aid; }
+        }
+        if ( $ids ) { $detail_map[ $lang ] = array_values( array_unique( $ids ) ); }
     }
-    $dc_ids = array();
-    foreach ( $detail_cn as $d ) {
-        // 未标语言的同一张图同时用于英文和中文，无需复制及生成两次缩略图。
-        $aid = isset( $detail_ids_by_path[ $d ] ) ? $detail_ids_by_path[ $d ] : ew_import_attach_image( $d, $folder_name . '-详细参数图-cn', $prod_id, 'detail' );
-        if ( $aid ) { $dc_ids[] = $aid; }
-    }
-    if ( ! empty( $de_ids ) ) { $detail_map['en'] = $de_ids; }
-    if ( ! empty( $dc_ids ) ) { $detail_map['cn'] = $dc_ids; }
-    if ( ! empty( $detail_map ) ) {
-        update_post_meta( $prod_id, '_model_detail_images', wp_json_encode( $detail_map, JSON_UNESCAPED_UNICODE ) );
-    }
+    if ( $detail_map ) { update_post_meta( $prod_id, '_model_detail_images', wp_slash( wp_json_encode( $detail_map, JSON_UNESCAPED_UNICODE ) ) ); }
 
     // 分类：自动识别优先，识别不到用表单手选的分类
     ew_import_apply_category( $prod_id, $cat_slug, ! empty( $options['cat_id'] ) ? (int) $options['cat_id'] : 0 );
@@ -916,6 +916,7 @@ function ew_import_one_folder( $dir, $folder_name, $options ) {
     if ( ! empty( $options['sync_langs'] ) ) {
         ew_product_sync_translations( $prod_id );
     }
+    ew_import_localized_text( $prod_id, $dir );
 
     return array(
         'name'     => $folder_name,
@@ -928,9 +929,60 @@ function ew_import_one_folder( $dir, $folder_name, $options ) {
     );
 }
 
+/** Import explicit translations from info.json; missing fields never erase existing text. */
+function ew_import_localized_text( $product_id, $dir ) {
+    $file = $dir . '/info.json';
+    if ( ! is_file( $file ) || filesize( $file ) > 2 * 1024 * 1024 ) { return; }
+    $info = json_decode( (string) file_get_contents( $file ), true );
+    if ( ! is_array( $info ) || empty( $info['translations'] ) || ! is_array( $info['translations'] ) ) { return; }
+    $languages = ew_product_languages();
+    foreach ( $info['translations'] as $language => $translation ) {
+        $key = ew_product_language_key( $language );
+        if ( ! isset( $languages[ $key ] ) || ! is_array( $translation ) ) { continue; }
+        $fields = array( 'packaging' => '_packaging_i18n', 'applications' => '_model_applications_i18n' );
+        foreach ( $fields as $field => $meta_key ) {
+            if ( ! isset( $translation[ $field ] ) || ! is_string( $translation[ $field ] ) || '' === trim( $translation[ $field ] ) ) { continue; }
+            $map = ew_product_meta_map( $product_id, $meta_key );
+            $map[ $key ] = sanitize_textarea_field( $translation[ $field ] );
+            update_post_meta( $product_id, $meta_key, wp_slash( wp_json_encode( $map, JSON_UNESCAPED_UNICODE ) ) );
+        }
+        if ( ! empty( $translation['specs'] ) && is_array( $translation['specs'] ) ) {
+            $rows = array();
+            foreach ( $translation['specs'] as $row ) {
+                if ( ! is_array( $row ) || ! isset( $row['name'], $row['value'] ) || ! is_scalar( $row['name'] ) || ! is_scalar( $row['value'] ) ) { continue; }
+                $name = sanitize_text_field( (string) $row['name'] );
+                if ( '' !== $name ) { $rows[] = array( 'name' => $name, 'value' => sanitize_text_field( (string) $row['value'] ) ); }
+            }
+            if ( $rows ) {
+                $map = ew_product_meta_map( $product_id, '_model_specs_i18n' ); $map[ $key ] = $rows;
+                update_post_meta( $product_id, '_model_specs_i18n', wp_slash( wp_json_encode( $map, JSON_UNESCAPED_UNICODE ) ) );
+            }
+        }
+        if ( ! empty( $translation['features'] ) && is_array( $translation['features'] ) ) {
+            $lines = array();
+            foreach ( $translation['features'] as $line ) { if ( is_string( $line ) && '' !== trim( $line ) ) { $lines[] = sanitize_text_field( $line ); } }
+            if ( $lines ) {
+                $map = ew_product_meta_map( $product_id, '_model_features_i18n' ); $map[ $key ] = wp_json_encode( $lines, JSON_UNESCAPED_UNICODE );
+                update_post_meta( $product_id, '_model_features_i18n', wp_slash( wp_json_encode( $map, JSON_UNESCAPED_UNICODE ) ) );
+            }
+        }
+        $translated_id = function_exists( 'pll_get_post' ) ? (int) pll_get_post( $product_id, $languages[ $key ]['slug'] ) : 0;
+        if ( $translated_id && 'product' === get_post_type( $translated_id ) ) {
+            $post = array( 'ID' => $translated_id );
+            foreach ( array( 'name' => 'post_title', 'excerpt' => 'post_excerpt', 'description' => 'post_content' ) as $field => $post_field ) {
+                if ( isset( $translation[ $field ] ) && is_string( $translation[ $field ] ) && '' !== trim( $translation[ $field ] ) ) {
+                    $post[ $post_field ] = 'post_title' === $post_field ? sanitize_text_field( $translation[ $field ] ) : wp_kses_post( $translation[ $field ] );
+                }
+            }
+            if ( count( $post ) > 1 ) { wp_update_post( wp_slash( $post ) ); }
+        }
+    }
+}
+
 /* ---------- 单商品拖拽导入：把 $_FILES 的一组图按命名归类并上传 ---------- */
 function ew_import_files_for_product( $id, $files ) {
     $result = array( 'main' => 0, 'white' => array(), 'scene' => array(), 'gallery' => array(), 'detail_en' => array(), 'detail_cn' => array(), 'count' => 0 );
+    foreach ( ew_product_languages() as $lang => $language ) { $result['detail_' . $lang] = array(); }
     if ( empty( $files['name'] ) || ! is_array( $files['name'] ) ) {
         return $result;
     }
@@ -947,8 +999,7 @@ function ew_import_files_for_product( $id, $files ) {
             $result['white'][] = $aid;
             if ( ! $result['main'] ) { $result['main'] = $aid; }
         } elseif ( is_array( $cls ) && 'detail' === $cls[0] ) {
-            if ( 'en' === $cls[1] || 'both' === $cls[1] ) { $result['detail_en'][] = $aid; }
-            if ( 'cn' === $cls[1] || 'both' === $cls[1] ) { $result['detail_cn'][] = $aid; }
+            foreach ( 'both' === $cls[1] ? array( 'en', 'cn' ) : array( $cls[1] ) as $lang ) { $result['detail_' . $lang][] = $aid; }
         } elseif ( is_array( $cls ) && 'scene' === $cls[0] ) {
             $result['scene'][] = $aid;
             $result['gallery'][] = $aid;

@@ -87,7 +87,7 @@ if ( function_exists( 'ew_url_is_local' ) && ! ew_url_is_local( $ew_foot_shop_ur
 					<?php foreach ( $ew_foot_scenarios as $ew_slug => $ew_sc ) : ?>
 						<?php $ew_sc_url = ew_scenario_url( $ew_slug ); ?>
 						<?php if ( ! function_exists( 'ew_url_is_local' ) || ew_url_is_local( $ew_sc_url ) ) : ?>
-						<li><a href="<?php echo esc_url( $ew_sc_url ); ?>"><?php echo esc_html( $ew_sc['title'] ); ?></a></li>
+						<li><a href="<?php echo esc_url( $ew_sc_url ); ?>"><?php echo ew_esc_html__( $ew_sc['title'] ); ?></a></li>
 						<?php endif; ?>
 					<?php endforeach; ?>
 				</ul>

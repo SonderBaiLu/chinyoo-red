@@ -11,8 +11,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 if ( ! function_exists( 'ew_get_model_specs' ) ) {
 function ew_get_model_specs( $post_id ) {
-    $raw   = get_post_meta( absint( $post_id ), '_model_specs', true );
-    $specs = json_decode( (string) $raw, true );
+    $raw   = ew_product_localized_meta( $post_id, '_model_specs_i18n', '_model_specs' );
+    $specs = is_array( $raw ) ? $raw : json_decode( (string) $raw, true );
 
     if ( ! is_array( $specs ) ) {
         return array();
@@ -78,40 +78,7 @@ function ew_get_model_gallery( $post_id ) {
  */
 if ( ! function_exists( 'ew_get_model_detail_images' ) ) {
 function ew_get_model_detail_images( $model_id ) {
-    $pid = absint( $model_id );
-    if ( ! $pid ) {
-        return array();
-    }
-
-    $raw = get_post_meta( $pid, '_model_detail_images', true );
-    $map = is_string( $raw ) ? json_decode( $raw, true ) : $raw;
-
-    if ( ! is_array( $map ) || empty( $map ) ) {
-        // 翻译页 → EN 源 post(翻译 post 各自不持 meta 副本)。
-        // 注意:变体分支不回退父 post——父 post 存的是"首个变体"的详情图,
-        // 当前模型非首个变体时回退会显示错型号内容。
-        if ( function_exists( 'pll_get_post' ) && function_exists( 'pll_default_language' ) ) {
-            $en = (int) pll_get_post( $pid, pll_default_language() );
-            if ( $en && $en !== $pid ) {
-                $raw = get_post_meta( $en, '_model_detail_images', true );
-                $map = is_string( $raw ) ? json_decode( $raw, true ) : $raw;
-            }
-        }
-    }
-    if ( ! is_array( $map ) || empty( $map ) ) {
-        return array();
-    }
-
-    $lang = function_exists( 'pll_current_language' ) ? pll_current_language() : 'en';
-    // zh / zh-tw 等中文变体统一取 cn；其余语言取自身 key，缺失时回退 en。
-    $key  = in_array( $lang, array( 'zh', 'zh-tw', 'zh-hk', 'cn' ), true ) ? 'cn' : $lang;
-    if ( ! empty( $map[ $key ] ) && is_array( $map[ $key ] ) ) {
-        return array_values( array_filter( array_map( 'absint', $map[ $key ] ) ) );
-    }
-    if ( ! empty( $map['en'] ) && is_array( $map['en'] ) ) {
-        return array_values( array_filter( array_map( 'absint', $map['en'] ) ) );
-    }
-    return array();
+    return ew_product_detail_image_ids( $model_id );
 }
 }
 
@@ -242,7 +209,7 @@ while ( have_posts() ) :
                 'url_model' => $url_model,
                 'specs'     => ew_get_model_specs( $vid ),
                 'gallery'   => ew_get_model_gallery( $vid ),
-                'packaging' => get_post_meta( $vid, '_packaging', true ),
+                'packaging' => ew_product_localized_meta( $vid, '_packaging_i18n', '_packaging' ),
             );
         }
     } else {
@@ -259,7 +226,7 @@ while ( have_posts() ) :
             'url_model' => $url_model,
             'specs'     => ew_get_model_specs( $pid ),
             'gallery'   => ew_get_model_gallery( $pid ),
-            'packaging' => get_post_meta( $pid, '_packaging', true ),
+            'packaging' => ew_product_localized_meta( $pid, '_packaging_i18n', '_packaging' ),
         );
     }
 
@@ -278,7 +245,7 @@ while ( have_posts() ) :
             'url_model' => $url_model,
             'specs'     => ew_get_model_specs( $pid ),
             'gallery'   => ew_get_model_gallery( $pid ),
-            'packaging' => get_post_meta( $pid, '_packaging', true ),
+            'packaging' => ew_product_localized_meta( $pid, '_packaging_i18n', '_packaging' ),
         );
     }
 
@@ -319,6 +286,8 @@ while ( have_posts() ) :
             );
         }
     }
+
+    if ( ! $highlights ) { $highlights = array_slice( $current_model['specs'], 0, 3 ); }
 
     /* --------------------------------------------------------------------
      * 4. Spec matrix: ordered union of every spec name across all models.
@@ -595,12 +564,12 @@ while ( have_posts() ) :
             <div class="product-tab__panel is-active" id="tab-Overview" role="tabpanel" aria-labelledby="Overview">
                 <?php if ( '' !== trim( $short_description ) ) : ?><p class="product-overview__intro"><?php echo esc_html( $short_description ); ?></p><?php endif; ?>
                 <?php
-                $feature_raw = get_post_meta( $product->get_id(), '_model_features', true );
+                $feature_raw = ew_product_localized_meta( $product->get_id(), '_model_features_i18n', '_model_features' );
                 if ( is_string( $feature_raw ) ) {
                     $feature_raw = json_decode( $feature_raw, true );
                 }
                 if ( ! is_array( $feature_raw ) && (int) $current_model['id'] !== (int) $product->get_id() ) {
-                    $feature_raw = get_post_meta( (int) $current_model['id'], '_model_features', true );
+                    $feature_raw = ew_product_localized_meta( (int) $current_model['id'], '_model_features_i18n', '_model_features' );
                     if ( is_string( $feature_raw ) ) {
                         $feature_raw = json_decode( $feature_raw, true );
                     }
@@ -686,9 +655,9 @@ while ( have_posts() ) :
             <div class="product-tab__panel" id="tab-Application" role="tabpanel" aria-labelledby="Application">
                 <h2 class="tab-panel-title"><?php ew_esc_html_e('Application'); ?></h2>
                 <?php
-                $app_text = (string) get_post_meta( $product->get_id(), '_model_applications', true );
+                $app_text = (string) ew_product_localized_meta( $product->get_id(), '_model_applications_i18n', '_model_applications' );
                 if ( '' === trim( $app_text ) && (int) $current_model['id'] !== (int) $product->get_id() ) {
-                    $app_text = (string) get_post_meta( (int) $current_model['id'], '_model_applications', true );
+                    $app_text = (string) ew_product_localized_meta( (int) $current_model['id'], '_model_applications_i18n', '_model_applications' );
                 }
                 if ( '' !== trim( $app_text ) ) :
                     $app_lines = array_values( array_filter( array_map( 'trim', preg_split( '/\r\n|\r|\n/', $app_text ) ) ) );

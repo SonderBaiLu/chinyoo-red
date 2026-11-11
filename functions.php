@@ -19,6 +19,7 @@ require_once EW_THEME_DIR . '/inc/theme-setup.php';
 require_once EW_THEME_DIR . '/inc/enqueue.php';
 require_once EW_THEME_DIR . '/inc/custom-post-types.php';
 require_once EW_THEME_DIR . '/inc/custom-fields.php';
+require_once EW_THEME_DIR . '/inc/product-localization.php';
 require_once EW_THEME_DIR . '/inc/product-editor.php';
 require_once EW_THEME_DIR . '/inc/product-import.php';
 require_once EW_THEME_DIR . '/inc/turnstile.php';
@@ -61,15 +62,40 @@ add_filter("body_class", function($classes) {
 // 带路径的 home_url() 永远原样返回、不加语言前缀。要生成当前语言的页面/分类链接必须走 permalink。
 function ew_page_url( $slug ) {
     $lang = function_exists( 'pll_current_language' ) ? pll_current_language() : 'en';
+    // Resolve the configured privacy page and the English terms page by ID before translation.
+    if ( in_array( $slug, array( 'privacy-policy', 'refund_returns' ), true ) ) {
+        $base = 'privacy-policy' === $slug ? (int) get_option( 'wp_page_for_privacy_policy' ) : 0;
+        $default = function_exists( 'pll_default_language' ) ? pll_default_language() : 'en';
+        if ( ! $base ) {
+            $pages = get_posts( array( 'post_type' => 'page', 'post_status' => 'publish', 'name' => $slug . '-2', 'lang' => $default, 'numberposts' => 1, 'fields' => 'ids', 'suppress_filters' => false ) );
+            $base = $pages ? (int) $pages[0] : 0;
+        }
+        if ( $base ) {
+            $id = function_exists( 'pll_get_post' ) ? pll_get_post( $base, $lang ) : 0;
+            $en = function_exists( 'pll_get_post' ) ? pll_get_post( $base, $default ) : 0;
+            return get_permalink( $id ?: ( $en ?: $base ) );
+        }
+    }
+    if ( 'quote' === $slug && in_array( $lang, array( 'de', 'fr', 'nl', 'it', 'ko', 'ja' ), true ) ) {
+        $contact = get_page_by_path( 'contact-us' );
+        $id = $contact && function_exists( 'pll_get_post' ) ? pll_get_post( $contact->ID, $lang ) : 0;
+        if ( $id && 'publish' === get_post_status( $id ) ) { return get_permalink( $id ); }
+    }
     // 商品总览：pl/cs/ro 没有真正的本地 WooCommerce shop 页 —— /{lang}/shop/ 虽返回 200，
     // 但归档为空、带 noindex、无 canonical、标题仍是英文 "Shop"。所以「商品」入口一律
     // 改指本地产品总览页（produkty / produse），走下面的 $subs 表。
-    if ( 'shop' === $slug && in_array( $lang, array( 'pl', 'cs', 'ro' ), true ) ) {
+    if ( 'shop' === $slug && in_array( $lang, array( 'pl', 'cs', 'ro', 'de', 'fr', 'nl', 'it', 'ja', 'ko' ), true ) ) {
         $slug = 'product-categories';
     }
     // 没有对应译文的英文页：pl/cs/ro 换成本地等价页，别让入口把用户送回英文版。
     // 例：/quote/ 英文询价页 → 本地「 kontakt/contact 」页（同一张询价表单）。
     $subs = array(
+        'de' => array( 'product-categories' => 'produkte' ),
+        'fr' => array( 'product-categories' => 'produits' ),
+        'nl' => array( 'product-categories' => 'producten' ),
+        'it' => array( 'product-categories' => 'prodotti' ),
+        'ja' => array( 'product-categories' => 'seihin' ),
+        'ko' => array( 'product-categories' => 'jepum' ),
         'pl' => array( 'product-categories' => 'produkty', 'quote' => 'kontakt' ),
         'cs' => array( 'product-categories' => 'produkty', 'quote' => 'kontakt' ),
         'ro' => array( 'product-categories' => 'produse',  'quote' => 'contact' ),
@@ -178,7 +204,7 @@ function ew_url_is_local( $url ) {
         return true;
     }
     $lang = pll_current_language();
-    if ( ! in_array( $lang, array( 'pl', 'cs', 'ro' ), true ) ) {
+    if ( ! in_array( $lang, array( 'pl', 'cs', 'ro', 'de', 'fr', 'nl', 'it', 'ja', 'ko' ), true ) ) {
         return true;
     }
     $path = wp_parse_url( $url, PHP_URL_PATH );

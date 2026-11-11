@@ -112,7 +112,7 @@
 								$ew_name = ! empty( $ew_lang['name'] ) ? $ew_lang['name'] : strtoupper( $ew_slug );
 								?>
 								<li class="lang-switcher__item">
-									<a href="<?php echo esc_url( $ew_lang['url'] ); ?>" class="lang-switcher__link" hreflang="<?php echo esc_attr( $ew_slug ); ?>" lang="<?php echo esc_attr( $ew_slug ); ?>"<?php echo ! empty( $ew_lang['current_lang'] ) ? ' aria-current="true"' : ''; ?>><?php ew_lang_flag( $ew_lang ); ?><span class="lang-switcher__name"><?php echo esc_html( $ew_name ); ?></span></a>
+									<a href="<?php echo esc_url( ew_product_language_url( $ew_lang['url'] ) ); ?>" class="lang-switcher__link" hreflang="<?php echo esc_attr( $ew_slug ); ?>" lang="<?php echo esc_attr( $ew_slug ); ?>"<?php echo ! empty( $ew_lang['current_lang'] ) ? ' aria-current="true"' : ''; ?>><?php ew_lang_flag( $ew_lang ); ?><span class="lang-switcher__name"><?php echo esc_html( $ew_name ); ?></span></a>
 								</li>
 							<?php endforeach; ?>
 						</ul>

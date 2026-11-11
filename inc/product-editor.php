@@ -221,10 +221,10 @@ function ew_model_editor( $id, $context = 'metabox' ) {
     $gallery = ew_editor_images( get_post_meta( $id, '_model_gallery', true ) );
     $white   = isset( $extras['white'] ) ? array_values( array_filter( array_map( 'absint', (array) $extras['white'] ) ) ) : array();
     $scene   = isset( $extras['scene'] ) ? array_values( array_filter( array_map( 'absint', (array) $extras['scene'] ) ) ) : array();
-    $languages = array(
-        'en' => array( '英文／默认', '其它语言没有详情图时，前台会用这里的图片。' ),
-        'cn' => array( '中文', '中文产品页使用的详情长图。' ),
-    );
+    $languages = ew_product_languages();
+    $first_language = key( $languages );
+    $spec_translations = ew_product_meta_map( $id, '_model_specs_i18n' );
+    $pack_translations = ew_product_meta_map( $id, '_packaging_i18n' );
     ?>
     <div class="ew-model-editor" data-context="<?php echo esc_attr( $context ); ?>">
         <input type="hidden" name="ew_model[<?php echo (int) $id; ?>][nonce]" value="<?php echo esc_attr( wp_create_nonce( 'ew_model_' . $id ) ); ?>">
@@ -244,11 +244,31 @@ function ew_model_editor( $id, $context = 'metabox' ) {
         <?php ew_editor_image_section( $id, 'white', '① 白底图', $white, '只显示第一张；留空时前台自动使用主图第一张。', true ); ?>
         <div class="ew-detail-group-title">② 商品详细信息图（按语言）</div>
         <div class="ew-language-tabs" role="tablist">
-            <?php foreach ( $languages as $lang => $language ) : ?><button type="button" class="ew-language-tab<?php echo 'en' === $lang ? ' is-active' : ''; ?>" data-target="<?php echo esc_attr( $lang ); ?>"><?php echo esc_html( $language[0] ); ?></button><?php endforeach; ?>
+            <?php foreach ( $languages as $lang => $language ) : ?><button type="button" class="ew-language-tab<?php echo $first_language === $lang ? ' is-active' : ''; ?>" data-target="<?php echo esc_attr( $lang ); ?>"><?php echo esc_html( $language['name'] ); ?></button><?php endforeach; ?>
         </div>
         <div class="ew-language-panels">
             <?php foreach ( $languages as $lang => $language ) : ?>
-                <div class="ew-language-panel<?php echo 'en' === $lang ? ' is-active' : ''; ?>" data-language="<?php echo esc_attr( $lang ); ?>"><?php ew_editor_image_section( $id, 'detail_' . $lang, $language[0] . '详情图', isset( $details[ $lang ] ) ? ew_editor_images( $details[ $lang ] ) : array(), $language[1] ); ?></div>
+                <div class="ew-language-panel<?php echo $first_language === $lang ? ' is-active' : ''; ?>" data-language="<?php echo esc_attr( $lang ); ?>">
+                    <?php
+                    $language_images = isset( $details[ $lang ] ) ? $details[ $lang ] : ( 'cn' === $lang && isset( $details['zh'] ) ? $details['zh'] : array() );
+                    ew_editor_image_section( $id, 'detail_' . $lang, $language['name'] . '详情图', ew_editor_images( $language_images ), '图片中的文字需要单独制作；上传后在对应语言页面显示。' );
+                    ?>
+                    <section class="ew-editor-panel ew-editor-specs">
+                        <h3><?php echo esc_html( $language['name'] ); ?>技术参数</h3><p>填写译文；全部留空则使用原有参数。数值、精度和型号请与原始资料保持一致。</p>
+                        <input type="hidden" class="ew-editor-spec-value" name="ew_model[<?php echo (int) $id; ?>][specs_<?php echo esc_attr( $lang ); ?>]" value="<?php echo esc_attr( wp_json_encode( isset( $spec_translations[ $lang ] ) ? $spec_translations[ $lang ] : array() ) ); ?>">
+                        <div class="ew-spec-table-head"><span></span><span></span><span>参数名称</span><span>参数值</span><span></span></div>
+                        <div class="ew-editor-spec-rows"></div><div class="ew-spec-empty">尚未填写此语言参数</div>
+                        <button type="button" class="button button-secondary ew-editor-add-spec">添加一行参数</button>
+                    </section>
+                    <section class="ew-editor-panel"><label class="ew-field"><span><?php echo esc_html( $language['name'] ); ?>包装说明</span><textarea dir="auto" rows="4" name="ew_model[<?php echo (int) $id; ?>][packaging_<?php echo esc_attr( $lang ); ?>]"><?php echo esc_textarea( isset( $pack_translations[ $lang ] ) && is_string( $pack_translations[ $lang ] ) ? $pack_translations[ $lang ] : '' ); ?></textarea></label></section>
+                    <?php foreach ( array( 'features' => array( '_model_features_i18n', '产品特点（每行一条）' ), 'applications' => array( '_model_applications_i18n', '应用说明' ) ) as $field => $config ) :
+                        $map = ew_product_meta_map( $id, $config[0] );
+                        $text = isset( $map[ $lang ] ) && is_string( $map[ $lang ] ) ? $map[ $lang ] : '';
+                        if ( 'features' === $field ) { $lines = json_decode( $text, true ); $text = is_array( $lines ) ? implode( "\n", array_filter( $lines, 'is_string' ) ) : ''; }
+                    ?>
+                        <section class="ew-editor-panel"><label class="ew-field"><span><?php echo esc_html( $language['name'] . ' ' . $config[1] ); ?></span><textarea dir="auto" rows="4" name="ew_model[<?php echo (int) $id; ?>][<?php echo esc_attr( $field . '_' . $lang ); ?>]"><?php echo esc_textarea( $text ); ?></textarea></label></section>
+                    <?php endforeach; ?>
+                </div>
             <?php endforeach; ?>
         </div>
         <?php ew_editor_image_section( $id, 'scene', '③ 使用场景图', $scene, '只显示第一张；展示产品的实际使用场景。', true ); ?>
@@ -261,18 +281,45 @@ function ew_apply_model_values( $id, $input ) {
     $extras  = ew_editor_array( get_post_meta( $id, '_model_detail_extras', true ) );
     $details_changed = false;
     $extras_changed  = false;
-    foreach ( array( 'gallery', 'white', 'scene', 'detail_en', 'detail_cn', 'detail_es', 'detail_ru', 'detail_ar', 'specs' ) as $key ) {
+    $spec_translations = ew_product_meta_map( $id, '_model_specs_i18n' );
+    $pack_translations = ew_product_meta_map( $id, '_packaging_i18n' );
+    $specs_changed = false;
+    $pack_changed = false;
+    $keys = array( 'gallery', 'white', 'scene', 'specs' );
+    foreach ( ew_product_languages() as $lang => $language ) {
+        $keys[] = 'detail_' . $lang;
+        $keys[] = 'specs_' . $lang;
+        $pack_key = 'packaging_' . $lang;
+        if ( isset( $input[ $pack_key ] ) && is_string( $input[ $pack_key ] ) ) {
+            $pack_translations[ $lang ] = sanitize_textarea_field( $input[ $pack_key ] );
+            $pack_changed = true;
+        }
+    }
+    foreach ( array( 'features' => '_model_features_i18n', 'applications' => '_model_applications_i18n' ) as $field => $meta_key ) {
+        $map = ew_product_meta_map( $id, $meta_key ); $changed = false;
+        foreach ( ew_product_languages() as $lang => $language ) {
+            $key = $field . '_' . $lang;
+            if ( ! isset( $input[ $key ] ) || ! is_string( $input[ $key ] ) ) { continue; }
+            $text = sanitize_textarea_field( $input[ $key ] );
+            $map[ $lang ] = 'features' === $field && '' !== $text ? wp_json_encode( array_values( array_filter( array_map( 'trim', preg_split( '/\r\n|\r|\n/', $text ) ), 'strlen' ) ), JSON_UNESCAPED_UNICODE ) : $text;
+            $changed = true;
+        }
+        if ( $changed ) { update_post_meta( $id, $meta_key, wp_slash( wp_json_encode( $map, JSON_UNESCAPED_UNICODE ) ) ); }
+    }
+    foreach ( $keys as $key ) {
+
         if ( ! isset( $input[ $key ] ) || ! is_string( $input[ $key ] ) ) { continue; }
         $values = json_decode( $input[ $key ], true );
         if ( ! is_array( $values ) || '[' !== substr( ltrim( $input[ $key ] ), 0, 1 ) ) { continue; }
-        if ( 'specs' === $key ) {
+        if ( 'specs' === $key || 0 === strpos( $key, 'specs_' ) ) {
             $clean = array();
             foreach ( $values as $row ) {
                 if ( ! is_array( $row ) || ! isset( $row['name'], $row['value'] ) || ! is_scalar( $row['name'] ) || ! is_scalar( $row['value'] ) ) { continue; }
                 $name = sanitize_text_field( (string) $row['name'] );
                 if ( '' !== $name ) { $clean[] = array( 'name' => $name, 'value' => sanitize_text_field( (string) $row['value'] ) ); }
             }
-            update_post_meta( $id, '_model_specs', wp_slash( wp_json_encode( $clean, JSON_UNESCAPED_UNICODE ) ) );
+            if ( 'specs' === $key ) { update_post_meta( $id, '_model_specs', wp_slash( wp_json_encode( $clean, JSON_UNESCAPED_UNICODE ) ) ); }
+            else { $spec_translations[ substr( $key, 6 ) ] = $clean; $specs_changed = true; }
         } else {
             $images = array();
             foreach ( $values as $value ) {
@@ -293,6 +340,8 @@ function ew_apply_model_values( $id, $input ) {
             }
         }
     }
+    if ( $specs_changed ) { update_post_meta( $id, '_model_specs_i18n', wp_slash( wp_json_encode( $spec_translations, JSON_UNESCAPED_UNICODE ) ) ); }
+    if ( $pack_changed ) { update_post_meta( $id, '_packaging_i18n', wp_slash( wp_json_encode( $pack_translations, JSON_UNESCAPED_UNICODE ) ) ); }
     if ( $details_changed ) { update_post_meta( $id, '_model_detail_images', wp_slash( wp_json_encode( $details, JSON_UNESCAPED_UNICODE ) ) ); }
     if ( $extras_changed ) { update_post_meta( $id, '_model_detail_extras', wp_slash( wp_json_encode( $extras, JSON_UNESCAPED_UNICODE ) ) ); }
     return true;
@@ -409,6 +458,15 @@ function ew_studio_form( $product_id, $values, $is_new = false ) {
                 </div>
                 <label class="ew-field ew-field-wide"><span>商品简介</span><textarea name="product_excerpt" rows="4" placeholder="核心卖点与简短介绍"><?php echo esc_textarea( $values['excerpt'] ); ?></textarea></label>
             </div>
+            <?php if ( $product_id && function_exists( 'pll_get_post' ) ) : ?>
+                <div class="ew-translation-links"><strong>编辑商品名称和简介的翻译：</strong>
+                <?php foreach ( ew_product_languages() as $language ) :
+                    $translated_id = (int) pll_get_post( $product_id, $language['slug'] );
+                    if ( $translated_id && current_user_can( 'edit_post', $translated_id ) ) : ?>
+                        <a class="button" href="<?php echo esc_url( ew_product_studio_url( $translated_id ) ); ?>"><?php echo esc_html( $language['name'] ); ?></a>
+                    <?php else : ?><span><?php echo esc_html( $language['name'] ); ?>：尚未关联翻译</span><?php endif;
+                endforeach; ?><p>请先保存当前修改再切换。缺少的商品翻译可在 WooCommerce 完整编辑页的语言面板中添加。</p></div>
+            <?php endif; ?>
             <?php if ( ! $is_new ) : ?><p class="ew-advanced-link">价格、库存、分类、SEO 等，请用 <a href="<?php echo esc_url( get_edit_post_link( $product_id ) ); ?>">WooCommerce 完整编辑页</a>。</p><?php endif; ?>
         </section>
         <section id="ew-studio-drop" class="ew-editor-panel ew-dropzone-panel">
@@ -419,7 +477,7 @@ function ew_studio_form( $product_id, $values, $is_new = false ) {
                 <span class="ew-dropzone-text">把文件夹拖到这里，或<span class="ew-dropzone-link">点击选择文件</span></span>
             </label>
             <ul class="ew-dropzone-preview"></ul>
-            <p class="ew-dropzone-note">已选 <span class="ew-dropzone-count">0</span> 个图片 · 命名：白底图→主图/详情第 1 张，详细参数图→详情第 2 张，使用场景图→详情第 3 张，展示图N→画廊</p>
+            <p class="ew-dropzone-note">已选 <span class="ew-dropzone-count">0</span> 个图片 · 命名：白底图→主图/详情第 1 张，详细参数图-de / -fr 等语言码→对应语言详情图，使用场景图→详情第 3 张，展示图N→画廊</p>
         </section>
         <?php ew_model_editor( $product_id, 'studio' ); ?>
         <div class="ew-studio-savebar"><span>记得保存</span><button class="button button-primary ew-save-button"><span class="dashicons dashicons-saved"></span>保存</button></div>
@@ -545,12 +603,12 @@ add_action( 'admin_post_ew_product_studio_save', function () {
             update_post_meta( $id, '_model_gallery', wp_slash( wp_json_encode( $gallery ) ) );
             set_post_thumbnail( $id, $imp['main'] ? $imp['main'] : $gallery[0] );
         }
-        if ( ! empty( $imp['detail_en'] ) || ! empty( $imp['detail_cn'] ) ) {
-            $details = ew_editor_array( get_post_meta( $id, '_model_detail_images', true ) );
-            if ( ! empty( $imp['detail_en'] ) ) { $details['en'] = $imp['detail_en']; }
-            if ( ! empty( $imp['detail_cn'] ) ) { $details['cn'] = $imp['detail_cn']; }
-            update_post_meta( $id, '_model_detail_images', wp_slash( wp_json_encode( $details, JSON_UNESCAPED_UNICODE ) ) );
+        $details = ew_editor_array( get_post_meta( $id, '_model_detail_images', true ) );
+        $details_changed = false;
+        foreach ( ew_product_languages() as $lang => $language ) {
+            if ( ! empty( $imp['detail_' . $lang] ) ) { $details[ $lang ] = $imp['detail_' . $lang]; $details_changed = true; }
         }
+        if ( $details_changed ) { update_post_meta( $id, '_model_detail_images', wp_slash( wp_json_encode( $details, JSON_UNESCAPED_UNICODE ) ) ); }
         if ( ! empty( $imp['white'] ) || ! empty( $imp['scene'] ) ) {
             $extras = ew_editor_array( get_post_meta( $id, '_model_detail_extras', true ) );
             if ( ! empty( $imp['white'] ) ) { $extras['white'] = array( (int) $imp['white'][0] ); }

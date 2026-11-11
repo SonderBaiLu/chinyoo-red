@@ -77,7 +77,9 @@ if ( $is_variable ) {
 			$en_id = pll_get_post( $product_id, pll_default_language() );
 			if ( $en_id && (int) $en_id !== (int) $product_id ) {
 				$en_product = function_exists( 'wc_get_product' ) ? wc_get_product( $en_id ) : null;
-				if ( $en_product instanceof WC_Product && $en_product->is_type( 'variable' ) ) {
+				if ( $en_product instanceof WC_Product && ! $en_product->is_type( 'variable' ) && '' !== trim( (string) $en_product->get_sku() ) ) {
+                    $model_skus[] = $en_product->get_sku();
+                } elseif ( $en_product instanceof WC_Product && $en_product->is_type( 'variable' ) ) {
 					foreach ( (array) $en_product->get_children() as $vid ) {
 						$en_v = function_exists( 'wc_get_product' ) ? wc_get_product( (int) $vid ) : null;
 						$vsku = $en_v instanceof WC_Product ? $en_v->get_sku() : '';
@@ -130,10 +132,10 @@ $specs_raw = '';
 if ( $is_variable ) {
 	$children = (array) $product->get_children();
 	if ( ! empty( $children ) ) {
-		$specs_raw = get_post_meta( (int) $children[0], '_model_specs', true );
+		$specs_raw = ew_product_localized_meta( (int) $children[0], '_model_specs_i18n', '_model_specs' );
 	}
 } else {
-	$specs_raw = get_post_meta( $product_id, '_model_specs', true );
+	$specs_raw = ew_product_localized_meta( $product_id, '_model_specs_i18n', '_model_specs' );
 }
 $specs = array();
 if ( is_array( $specs_raw ) ) {
