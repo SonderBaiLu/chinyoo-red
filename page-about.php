@@ -80,7 +80,7 @@ get_header();
 	<section class="about-certs" id="certifications">
 		<h2 class="sec-title"><?php ew_esc_html_e('Certifications'); ?></h2>
 		<p class="about-lead"><?php ew_esc_html_e('All products are CE (EMC and LVD) certified and RoHS compliant, verified by DTI (Deesev Testing) per IEC 62321, produced in our ISO 9001-certified factory.'); ?></p>
-		<div class="cert-grid">
+		<div class="cert-grid cert-carousel" role="region" aria-label="<?php ew_esc_attr_e('Certifications'); ?>" tabindex="0">
 			<a class="cert-card cert-card--img" href="https://www.chinyoo.com/wp-content/uploads/2026/08/cert-01.pdf" target="_blank" rel="noopener"><img class="cert-card__img" src="https://www.chinyoo.com/wp-content/uploads/2026/08/cert-display/ce.jpg" alt="<?php ew_esc_attr_e('EU Conformity'); ?>" loading="lazy"><b>CE</b><span><?php ew_esc_html_e('EU Conformity'); ?></span></a>
 			<a class="cert-card cert-card--img" href="https://www.chinyoo.com/wp-content/uploads/2026/08/cert-04.pdf" target="_blank" rel="noopener"><img class="cert-card__img" src="https://www.chinyoo.com/wp-content/uploads/2026/08/cert-display/emc.jpg" alt="<?php ew_esc_attr_e('Electromagnetic Compatibility'); ?>" loading="lazy"><b>EMC</b><span><?php ew_esc_html_e('Electromagnetic Compatibility'); ?></span></a>
 			<a class="cert-card cert-card--img" href="https://www.chinyoo.com/wp-content/uploads/2026/08/cert-09-1.pdf" target="_blank" rel="noopener"><img class="cert-card__img" src="https://www.chinyoo.com/wp-content/uploads/2026/08/cert-display/lvd.jpg" alt="<?php ew_esc_attr_e('Low Voltage Directive'); ?>" loading="lazy"><b>LVD</b><span><?php ew_esc_html_e('Low Voltage Directive'); ?></span></a>
@@ -90,8 +90,8 @@ get_header();
 			<a class="cert-card cert-card--img" href="https://www.chinyoo.com/wp-content/uploads/2026/08/dti-rohs-report-ee190805r.pdf" target="_blank" rel="noopener"><img class="cert-card__img" src="https://www.chinyoo.com/wp-content/uploads/thumbnails/6759683c0559b32b.jpg" alt="RoHS Report — DTI EE190805R" loading="lazy"><b>RoHS Report</b><span><?php ew_esc_html_e('DTI EE190805R — Voltage Tester VD06 series'); ?></span></a>
 			<a class="cert-card cert-card--img" href="https://www.chinyoo.com/wp-content/uploads/2026/08/cert-05.pdf" target="_blank" rel="noopener"><img class="cert-card__img" src="https://www.chinyoo.com/wp-content/uploads/2026/08/cert-display/fcc.jpg" alt="<?php ew_esc_attr_e('FCC Certification'); ?>" loading="lazy"><b>FCC</b><span><?php ew_esc_html_e('FCC Certification'); ?></span></a>
 			<a class="cert-card cert-card--img" href="https://www.chinyoo.com/wp-content/uploads/2026/08/cert-02-1.pdf" target="_blank" rel="noopener"><img class="cert-card__img" src="https://www.chinyoo.com/wp-content/uploads/2026/08/cert-display/battery.jpg" alt="<?php ew_esc_attr_e('Battery Directives'); ?>" loading="lazy"><b><?php ew_esc_html_e('Battery Directives'); ?></b><span><?php ew_esc_html_e('CE & US Battery Compliance'); ?></span></a>
-			<div class="cert-card"><b>ISO 9001</b><span><?php ew_esc_html_e('Quality Management System'); ?></span></div>
-			<div class="cert-card"><b>OEM / ODM</b><span><?php ew_esc_html_e('Custom Manufacturing'); ?></span></div>
+			<a class="cert-card" href="<?php echo esc_url( ew_page_url( 'certifications' ) ); ?>"><b>ISO 9001</b><span><?php ew_esc_html_e('Quality Management System'); ?></span></a>
+			<a class="cert-card" href="<?php echo esc_url( ew_page_url( 'certifications' ) ); ?>"><b>OEM / ODM</b><span><?php ew_esc_html_e('Custom Manufacturing'); ?></span></a>
 		</div>
 		<p style="text-align:center;margin-top:24px"><a class="btn btn--primary" href="<?php echo esc_url( ew_page_url( 'certifications' ) ); ?>"><?php ew_esc_html_e('View All Certificates'); ?></a></p>
 	</section>

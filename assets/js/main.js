@@ -196,19 +196,20 @@
                 return card.getBoundingClientRect().width + gap;
             };
             var fcMax = function () { return fcTrack.scrollWidth - fcTrack.clientWidth; };
+            var fcRtl = window.getComputedStyle(fcTrack).direction === 'rtl';
             var fcGo = function (dir) {
                 var max = fcMax();
                 if (max <= 1) { return; }
-                var next = fcTrack.scrollLeft + dir * fcStep();
-                if (dir > 0 && next >= max - 1) { next = 0; }
-                else if (dir < 0 && next <= 1) { next = max; }
-                fcTrack.scrollTo({ left: next, behavior: 'smooth' });
+                var pos = fcRtl ? -fcTrack.scrollLeft : fcTrack.scrollLeft;
+                var next = dir > 0 ? (pos >= max - 1 ? 0 : Math.min(max, pos + fcStep()))
+                    : (pos <= 1 ? max : Math.max(0, pos - fcStep()));
+                fcTrack.scrollTo({ left: fcRtl ? -next : next, behavior: 'smooth' });
             };
             var fcStop = function () { if (fcTimer) { window.clearInterval(fcTimer); fcTimer = null; } };
             var fcStart = function () { fcStop(); fcTimer = window.setInterval(function () { fcGo(1); }, fcDelay); };
 
-            if (fcPrev) { fcPrev.addEventListener('click', function () { fcStop(); fcGo(-1); fcStart(); }); }
-            if (fcNext) { fcNext.addEventListener('click', function () { fcStop(); fcGo(1); fcStart(); }); }
+            if (fcPrev) { fcPrev.addEventListener('click', function () { fcStop(); fcGo(1); fcStart(); }); }
+            if (fcNext) { fcNext.addEventListener('click', function () { fcStop(); fcGo(-1); fcStart(); }); }
             fcTrack.addEventListener('mouseenter', fcStop);
             fcTrack.addEventListener('mouseleave', fcStart);
             fcTrack.addEventListener('touchstart', fcStop, { passive: true });
@@ -222,6 +223,63 @@
             if (fcMq.addEventListener) { fcMq.addEventListener('change', fcSync); }
             if (fcReduce.addEventListener) { fcReduce.addEventListener('change', fcSync); }
             fcSync();
+        }
+
+        // ---- 关于我们证书：自动换张、悬停暂停、鼠标拖动 ----
+        var certTrack = document.querySelector('.about-certs .cert-carousel');
+        if (certTrack) {
+            var certTimer = null;
+            var certReduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+            var certRtl = window.getComputedStyle(certTrack).direction === 'rtl';
+            var certMax = function () { return Math.max(0, certTrack.scrollWidth - certTrack.clientWidth); };
+            var certPos = function () { return certRtl ? -certTrack.scrollLeft : certTrack.scrollLeft; };
+            var certStep = function () {
+                var card = certTrack.querySelector('.cert-card');
+                return card ? card.getBoundingClientRect().width + (parseFloat(window.getComputedStyle(certTrack).gap) || 0) : certTrack.clientWidth;
+            };
+            var certStop = function () { if (certTimer) { window.clearInterval(certTimer); certTimer = null; } };
+            var certStart = function () {
+                certStop();
+                if (certReduce.matches || document.hidden || certMax() < 2 || certTrack.matches(':hover') || certTrack.contains(document.activeElement)) return;
+                certTimer = window.setInterval(function () {
+                    var next = certPos() + certStep();
+                    if (next >= certMax() - 2) next = 0;
+                    certTrack.scrollTo({ left: certRtl ? -next : next, behavior: 'smooth' });
+                }, 3000);
+            };
+            certTrack.addEventListener('mouseenter', certStop);
+            certTrack.addEventListener('mouseleave', certStart);
+            certTrack.addEventListener('focusin', certStop);
+            certTrack.addEventListener('focusout', function () { window.setTimeout(certStart, 0); });
+            certTrack.addEventListener('touchstart', certStop, { passive: true });
+            certTrack.addEventListener('touchend', certStart);
+            document.addEventListener('visibilitychange', certStart);
+            if (certReduce.addEventListener) certReduce.addEventListener('change', certStart);
+            var drag = null;
+            certTrack.addEventListener('pointerdown', function (e) {
+                if (e.pointerType !== 'mouse' || e.button !== 0) return;
+                certStop();
+                drag = { x: e.clientX, left: certTrack.scrollLeft, moved: false };
+            });
+            certTrack.addEventListener('pointermove', function (e) {
+                if (!drag) return;
+                var delta = e.clientX - drag.x;
+                if (Math.abs(delta) > 5 && !drag.moved) {
+                    drag.moved = true;
+                    certTrack.classList.add('is-dragging');
+                    certTrack.setPointerCapture(e.pointerId);
+                }
+                if (drag.moved) certTrack.scrollLeft = drag.left - delta;
+            });
+            certTrack.addEventListener('pointerup', function () {
+                if (drag && drag.moved) certTrack.dataset.dragged = '1';
+                drag = null; certTrack.classList.remove('is-dragging'); certStart();
+            });
+            certTrack.addEventListener('pointercancel', function () { drag = null; certTrack.classList.remove('is-dragging'); certStart(); });
+            certTrack.addEventListener('click', function (e) {
+                if (certTrack.dataset.dragged === '1') { e.preventDefault(); e.stopPropagation(); certTrack.dataset.dragged = ''; }
+            }, true);
+            certStart();
         }
 
         // ---- 锚点平滑滚动 ----
