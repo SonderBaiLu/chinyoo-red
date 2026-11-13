@@ -191,6 +191,9 @@ a.cert:hover{background:var(--primary)}
 .stat b{display:block;font-size:var(--fs-4xl);font-weight:700;line-height:1.05}
 .stat span{display:block;margin-top:6px;font-size:var(--fs-sm);line-height:1.35;opacity:.92}
 .about-certs,.about-address{padding:24px 0}
+.local-faq-group{margin:0 0 34px}
+.local-faq-group h2{font-size:var(--fs-xl);color:var(--primary);margin:0 0 14px}
+.local-faq-group .product-faq__list{margin:0}
 .cert-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:20px}
 .cert-card{background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:22px 16px;text-align:center}
 a.cert-card{display:block;text-decoration:none;transition:border-color .2s,box-shadow .2s,transform .2s}

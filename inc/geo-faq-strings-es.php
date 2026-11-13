@@ -3,6 +3,14 @@
 // Geo FAQ translations for es. Keys: {id}q = question, {id}a = answer.
 function ew_geo_faq_dict_es() {
 	return array(
+        'cap1q' => '¿Puedo medir la capacidad con un multímetro básico o necesito un medidor LCR?',
+        'cap1a' => 'Compruebe si el modelo incluye un rango de capacidad. El XT802 mide de 4 nF a 40 mF con una precisión de ±10,8 %, y el DT6222, de 4 nF a 4 mF con ±3,5 %. Para comprobar la capacidad suele bastar el multímetro. Para medir la resistencia serie equivalente (ESR), el factor de disipación o la corriente de fuga, elija un instrumento con esa función.',
+        'cap2q' => '¿Por qué la capacidad medida difiere del valor impreso en el condensador?',
+        'cap2a' => 'El valor impreso es nominal. Son habituales tolerancias de ±5 % en condensadores de película y de ±20 % en electrolíticos. Una desviación mayor puede indicar envejecimiento o pérdida de electrolito. Compruebe el multímetro con un condensador de valor conocido.',
+        'cap3q' => '¿Debo desoldar el condensador antes de medirlo?',
+        'cap3a' => 'Desconecte la alimentación, descargue el condensador y compruebe que no quede tensión. Desuelde al menos un terminal: los componentes en paralelo y los caminos de descarga pueden alterar la lectura. Anote el valor cuando se estabilice.',
+        'cap4q' => '¿Qué rango de capacidad necesito para las reparaciones habituales?',
+        'cap4a' => 'La mayoría de las reparaciones abarcan de 1 nF a 1000 µF. Los condensadores cerámicos y de película suelen medirse en nanofaradios, y los electrolíticos en microfaradios. El DT6222 cubre de 4 nF a 4 mF con una pantalla de 4000 cuentas. Para electrolíticos de mayor capacidad, el XT802 cubre de 4 nF a 40 mF.',
 		'g1q' => '¿Cuál es la cantidad mínima de pedido para venta al por mayor?',
 		'g1a' => 'Atendemos tanto pedidos de prueba pequeños como ventas al por mayor a escala de contenedor. Indíquenos los modelos y la cantidad que necesita, y nuestro equipo de ventas le responderá con el precio y el plazo de entrega en un plazo de 24 horas.',
 		'g2q' => '¿Ofrecen servicios de OEM/ODM con nuestra propia marca?',

@@ -5,7 +5,7 @@ defined( 'ABSPATH' ) || exit;
 function ew_hub_labels() {
     return array(
         'en'=>array('Blog','FAQs','Services & Support','News & Insights'),
-        'pl'=>array('Blog','Najczęstsze pytania','Serwis i wsparcie','Aktualności i poradniki'),
+        'pl'=>array('Artykuły','Najczęstsze pytania','Serwis i wsparcie','Aktualności i poradniki'),
         'cs'=>array('Blog','Časté otázky','Servis a podpora','Novinky a průvodci'),
         'ro'=>array('Blog','Întrebări frecvente','Servicii și asistență','Noutăți și ghiduri'),
         'de'=>array('Blog','Häufige Fragen','Service und Support','Neuigkeiten und Ratgeber'),
@@ -27,11 +27,30 @@ add_shortcode( 'ew_local_faq', function () {
     require_once __DIR__ . '/geo-faq-strings-' . $lang . '.php';
     $dict = call_user_func( 'ew_geo_faq_dict_' . $lang );
     $html = '';
-    foreach ( array('g1','g2','g7','bdm1','bdm2','bdm3','bdm4','dcm1','dcm2','dcm3','dcm4') as $id ) {
-        if ( empty($dict[$id.'q']) || empty($dict[$id.'a']) ) continue;
-        $html .= '<details class="product-faq__item"><summary>' . esc_html($dict[$id.'q']) . '</summary><p>' . esc_html($dict[$id.'a']) . '</p></details>';
+    $category_labels = ew_geo_faq_categories();
+    $temperature_labels = array('pl'=>'Mierniki temperatury','cs'=>'Teploměry','ro'=>'Termometre','de'=>'Temperaturmessgeräte','fr'=>'Thermomètres','nl'=>'Temperatuurmeters','it'=>'Termometri','ja'=>'温度計','ko'=>'온도계','zh'=>'温度计','es'=>'Termómetros','ru'=>'Термометры','ar'=>'أجهزة قياس الحرارة');
+    foreach ( ew_geo_faq_all() as $group => $rows ) {
+        $items = '';
+        foreach ( $rows as $row ) {
+            $id = $row['id'];
+            if ( empty($dict[$id.'q']) || empty($dict[$id.'a']) ) continue;
+            $items .= '<details class="product-faq__item"><summary>' . esc_html($dict[$id.'q']) . '</summary><div class="product-faq__answer"><p>' . esc_html($dict[$id.'a']) . '</p></div></details>';
+        }
+        if ( '' === $items ) continue;
+        $heading = ew_hub_labels()[$lang][1];
+        if ( 'general' !== $group ) {
+            $heading = isset($category_labels[$group]) ? $category_labels[$group] : $temperature_labels[$lang];
+            $source_terms = get_terms(array('taxonomy'=>'product_cat','slug'=>$group,'hide_empty'=>false,'lang'=>'en'));
+            $source_term = !is_wp_error($source_terms) && !empty($source_terms) ? $source_terms[0] : null;
+            if ( $source_term && !is_wp_error($source_term) ) {
+                $translated_id = pll_get_term($source_term->term_id, $lang);
+                $translated_term = $translated_id ? get_term($translated_id, 'product_cat') : null;
+                if ( $translated_term && !is_wp_error($translated_term) ) $heading = $translated_term->name;
+            }
+        }
+        $html .= '<section class="local-faq-group"><h2>' . esc_html($heading) . '</h2><div class="product-faq__list">' . $items . '</div></section>';
     }
-    return '<div class="product-faq__list">'.$html.'</div>';
+    return '<div class="local-faq">'.$html.'</div>';
 } );
 add_shortcode( 'ew_local_support', function () {
     $html = '';
