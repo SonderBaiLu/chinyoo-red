@@ -60,8 +60,20 @@ add_filter("body_class", function($classes) {
 // --- 语言感知 URL 助手 ---
 // 不能直接用 home_url('/slug/')：Polylang 的 home_url 过滤只翻译"不带路径"的首页 URL，
 // 带路径的 home_url() 永远原样返回、不加语言前缀。要生成当前语言的页面/分类链接必须走 permalink。
+require_once __DIR__ . '/inc/localized-hubs.php';
+
 function ew_page_url( $slug ) {
     $lang = function_exists( 'pll_current_language' ) ? pll_current_language() : 'en';
+    if ( $lang && 'en' !== $lang && in_array( $slug, array('news','support','faqs'), true ) ) {
+        if ( 'faqs' === $slug ) {
+            $page = get_page_by_path('faq-guide-'.$lang);
+            if ($page && 'publish' === $page->post_status) return get_permalink($page);
+        } else {
+            $source = 'news' === $slug ? (int)get_option('page_for_posts') : get_page_by_path('support');
+            $id = $source ? pll_get_post(is_object($source) ? $source->ID : $source, $lang) : 0;
+            if ($id && 'publish' === get_post_status($id)) return get_permalink($id);
+        }
+    }
     // Resolve the configured privacy page and the English terms page by ID before translation.
     if ( in_array( $slug, array( 'privacy-policy', 'refund_returns' ), true ) ) {
         $base = 'privacy-policy' === $slug ? (int) get_option( 'wp_page_for_privacy_policy' ) : 0;
