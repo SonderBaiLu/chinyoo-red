@@ -218,8 +218,7 @@ $ew_org_home = ( function_exists('pll_home_url') && function_exists('pll_default
 
 <?php wp_footer(); ?>
 
-<!-- 客服浮层（WhatsApp） -->
-<a class="fab" href="https://wa.me/8617816800511" target="_blank" rel="noopener" title="WhatsApp">WA</a>
+<?php ew_contact_render(); ?>
 
 <!-- Lightbox Modal -->
 <div class="lightbox-overlay" id="lightbox-overlay" role="dialog" aria-modal="true" aria-label="<?php ew_esc_attr_e( 'Enlarged product image' ); ?>" aria-hidden="true" onclick="closeLightbox()">

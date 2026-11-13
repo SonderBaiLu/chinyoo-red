@@ -1,0 +1,73 @@
+.ew-contact {
+    --contact-ink: #24191a;
+    --contact-accent: #872938;
+    position: fixed;
+    right: max(18px, env(safe-area-inset-right));
+    bottom: max(20px, env(safe-area-inset-bottom));
+    z-index: 9990;
+    color: var(--contact-ink);
+    font-family: inherit;
+}
+.ew-contact *, .ew-contact { box-sizing: border-box; }
+.ew-contact button { cursor: pointer; font: inherit; border: 0; margin: 0; }
+.ew-contact .ew-contact-trigger {
+    width: 56px; height: 56px; padding: 0; display: grid; place-items: center;
+    color: #fff; background: var(--contact-accent); border-radius: 17px;
+    box-shadow: 0 2px 6px #34131a38, 0 6px 16px #34131a25;
+}
+.ew-contact-trigger:hover, .ew-contact-trigger[aria-expanded=true] { filter: brightness(1.1); }
+.ew-contact :focus-visible { outline: 3px solid #7553ad; outline-offset: 2px; }
+.ew-contact .ew-contact-card[hidden] { display: none; }
+.ew-contact .ew-contact-card, .ew-contact .ew-contact-group { padding: 0; margin: 0; }
+.ew-contact-card {
+    position: absolute; right: 0; bottom: calc(100% + 10px);
+    display: flex; flex-direction: column; width: min(340px, calc(100vw - 36px));
+    max-height: calc(100vh - 110px); max-height: calc(100dvh - 110px);
+    background: #fff8f7; border: 1px solid #e9d8d8; border-radius: 24px;
+    box-shadow: 0 4px 12px #30151b1a, 0 16px 40px #30151b24;
+    isolation: isolate; animation: ew-contact-enter .16s ease-out;
+}
+.ew-contact-card header {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 12px 12px 6px 20px; padding-inline: 20px 12px;
+}
+.ew-contact-card header h2 {
+    margin: 0; font-family: inherit;
+    font-size: 1.25rem; font-weight: 600; line-height: 1.3;
+    color: var(--contact-ink); text-transform: none; letter-spacing: normal;
+}
+.ew-contact .ew-contact-close {
+    flex: none; width: 44px; height: 44px; padding: 0; border-radius: 50%;
+    background: transparent; color: #534347; font-size: 25px; line-height: 1;
+}
+.ew-contact-list { overflow-y: auto; overscroll-behavior: contain; padding: 0 10px 5px; }
+.ew-contact-card { background: #fff; border-radius: 22px; transform-origin: bottom right; animation: ew-contact-in .24s cubic-bezier(.2,.8,.2,1) both; }
+.ew-contact-card.is-closing { animation: ew-contact-out .16s ease-in both; }
+.ew-contact-card header { padding-block: 3px 0; }
+.ew-contact-channels { display: flex; gap: 4px; flex-wrap: wrap; overflow-y: auto; max-height: 25vh; flex-shrink: 0; margin: 0 12px 3px; padding: 3px; border-radius: 16px; background: #f6f1f1; }
+.ew-contact .ew-contact-channel { flex: 1 1 auto; min-width: 0; min-height: 36px; padding: 4px 12px; background: transparent; color: #54484a; border-radius: 12px; font-size: .9rem; font-weight: 600; overflow-wrap: anywhere; transition: background .16s, color .16s, box-shadow .16s; }
+.ew-contact .ew-contact-channel[aria-pressed=true] { background: #fff; color: #852636; box-shadow: 0 1px 4px #431d2526; }
+.ew-contact-list { min-height: 0; }
+.ew-contact-group[hidden] { display: none; }
+.ew-contact-group a { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 4px 10px; border-radius: 13px; color: var(--contact-ink); text-decoration: none; transition: background .16s; animation: ew-contact-row .24s ease-out backwards; }
+.ew-contact-group a:nth-child(2) { animation-delay: 35ms; }
+.ew-contact-group a:nth-child(3) { animation-delay: 65ms; }
+.ew-contact-group a:hover, .ew-contact .ew-contact-close:hover { background: #faf2f2; }
+.ew-contact-avatar { display: grid; place-items: center; width: 38px; height: 38px; flex: none; border-radius: 14px; background: #f5e0df; color: #733b3c; font: 600 1rem/1 system-ui,sans-serif; }
+.ew-contact-group a:nth-child(3n+2) .ew-contact-avatar { background: #e0ece7; color: #375849; }
+.ew-contact-group a:nth-child(3n) .ew-contact-avatar { background: #e9e4f2; color: #584768; }
+.ew-contact-details { display: grid; gap: 2px; flex: 1; min-width: 0; overflow-wrap: anywhere; line-height: 1.3; }
+.ew-contact-avatar { overflow: hidden; }
+.ew-contact-avatar img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.ew-contact-name { color: var(--person-name,var(--contact-ink)); font-size: .98rem; font-weight: 600; }
+.ew-contact-details small { color: var(--person-detail,#62575a); font-size: .8rem; text-align: start; }
+.ew-contact-arrow { color: #78686c; transition: transform .18s; }
+.ew-contact-group a:hover .ew-contact-arrow { transform: translate(2px,-2px); }
+.ew-contact-trigger svg { transition: transform .22s ease; }
+.ew-contact-trigger[aria-expanded=true] svg { transform: rotate(-8deg); }
+@keyframes ew-contact-in { from { opacity:0; transform:translateY(10px) scale(.95); } to { opacity:1; transform:none; } }
+@keyframes ew-contact-out { to { opacity:0; transform:translateY(6px) scale(.97); } }
+@keyframes ew-contact-row { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:none; } }
+@media (prefers-reduced-motion: reduce) {
+    .ew-contact *, .ew-contact .ew-contact-card.is-closing { animation: none !important; transition: none !important; }
+}

@@ -1108,6 +1108,22 @@ add_filter( 'rank_math/frontend/description', function ( $desc ) {
     return $desc;
 }, 40 );
 
+// WooCommerce uses the default shop page for archive metadata even on translated archives.
+add_filter( 'rank_math/frontend/title', function ( $title ) {
+    if ( ! function_exists( 'is_shop' ) || ! is_shop() || ! function_exists( 'pll_get_post' ) || is_paged() ) {
+        return $title;
+    }
+    $shop_id = (int) get_option( 'woocommerce_shop_page_id' );
+    $translated_id = pll_get_post( $shop_id );
+    if ( $translated_id && $translated_id !== $shop_id ) {
+        $source = get_post_field( 'post_title', $shop_id, 'raw' );
+        if ( $source && strpos( $title, $source ) === 0 ) {
+            return get_post_field( 'post_title', $translated_id, 'raw' ) . substr( $title, strlen( $source ) );
+        }
+    }
+    return $title;
+}, 50 );
+
 function ew_build_mega_tree() {
     $top_cats = get_terms( array(
         'taxonomy'   => 'product_cat',
@@ -1421,3 +1437,5 @@ if ( ! function_exists( 'ew_buyer_faq_block' ) ) {
 		echo '</section>';
 	}
 }
+
+require_once __DIR__ . '/inc/contact-panel.php';

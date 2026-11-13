@@ -180,11 +180,20 @@ function ew_enqueue_assets() {
     // Pass AJAX URL, nonce and language-aware telephone defaults to JS.
     $ew_current_lang = function_exists( 'pll_current_language' ) ? pll_current_language( 'slug' ) : 'en';
     $ew_phone_countries = array( 'en' => 'us', 'zh' => 'cn', 'es' => 'es', 'ru' => 'ru', 'ar' => 'ae' );
+    // 询盘提交成功后的确认页：按当前语言解析，缺译页时回落 EN
+    $ew_thanks_id  = (int) get_option( 'ew_thanks_page_id' );
+    $ew_thanks_url = '';
+    if ( $ew_thanks_id ) {
+        $ew_tid = function_exists( 'pll_get_post' ) ? pll_get_post( $ew_thanks_id, $ew_current_lang ) : $ew_thanks_id;
+        if ( ! $ew_tid ) { $ew_tid = $ew_thanks_id; }
+        $ew_thanks_url = (string) get_permalink( $ew_tid );
+    }
     wp_localize_script( 'ew-main-script', 'ew_ajax', array(
         'ajax_url' => admin_url( 'admin-ajax.php' ),
         'nonce'    => wp_create_nonce( 'ew_inquiry_nonce' ),
         'iti_utils_url' => EW_THEME_URI . '/assets/vendor/intl-tel-input/js/utils.js',
         'iti_initial_country' => isset( $ew_phone_countries[ $ew_current_lang ] ) ? $ew_phone_countries[ $ew_current_lang ] : 'us',
+        'thanks_url' => $ew_thanks_url,
     ));
 
     // --- 客户账户 / 收藏（全站，因为商品卡带有收藏按钮） ---

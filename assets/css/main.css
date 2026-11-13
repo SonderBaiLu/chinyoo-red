@@ -2769,3 +2769,18 @@ section {
     height: auto;
     border-radius: 8px
 }
+
+/* Waveform comparison article. Keep numerical comparisons aligned in either reading direction. */
+.single-article__content .rms-reading { max-inline-size: 72ch; margin-inline: auto; overflow-wrap: anywhere; }
+.single-article__content .rms-reading p { line-height: 1.8; margin-block: 0 1em; }
+.single-article__content .rms-reading .rms-intro { font-size: 1.12em; line-height: 1.65; border-inline-start: 3px solid #b2272c; padding-inline-start: 1em; margin-block-end: 1.7em; }
+.single-article__content .rms-reading h2 { font-size: clamp(1.2rem, 2vw, 1.55rem); line-height: 1.35; margin-block: 1.6em .55em; }
+.rms-table { max-inline-size: 100%; overflow-x: auto; }
+.rms-reading .rms-table table { border-collapse: collapse; width: 100%; min-width: 0; table-layout: fixed; margin: 0; }
+.rms-reading .rms-table :is(td, th) { padding: .7em .8em; text-align: start; vertical-align: top; line-height: 1.5; border: 1px solid #d8dce0; }
+.rms-reading .rms-table thead th { background: #f0f2f4; color: #222; }
+.rms-reading .rms-table th:first-child { width: 25%; }
+@media (max-width: 600px) {
+    .single-article__content .rms-reading p { line-height: 1.7; }
+    .rms-reading .rms-table :is(td, th) { padding: .5em .4em; font-size: .9rem; }
+}

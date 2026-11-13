@@ -603,8 +603,8 @@ while ( have_posts() ) :
                             }
                             ?>
                             <li class="product-features__item<?php echo $is_key ? ' is-key' : ''; ?>">
-                                <strong><?php echo esc_html( $spec_name ); ?>:</strong>
-                                <?php echo esc_html( $spec_value ); ?>
+                                <strong><?php echo ew_esc_html__( $spec_name ); ?>:</strong>
+                                <?php echo ew_esc_html__( $spec_value ); ?>
                             </li>
                         <?php endforeach; ?>
                     </ul>
@@ -639,10 +639,10 @@ while ( have_posts() ) :
                         <tbody>
                             <?php foreach ( $spec_matrix_names as $name ) : ?>
                                 <tr>
-                                    <td><?php echo esc_html( $name ); ?></td>
+                                    <td><?php echo ew_esc_html__( $name ); ?></td>
                                     <?php foreach ( $spec_matrix_data as $map ) : ?>
                                         <?php $cell = isset( $map[ $name ] ) ? (string) $map[ $name ] : ''; ?>
-                                        <td><?php echo '' !== $cell ? esc_html( $cell ) : '&mdash;'; ?></td>
+                                        <td><?php echo '' !== $cell ? ew_esc_html__( $cell ) : '&mdash;'; ?></td>
                                     <?php endforeach; ?>
                                 </tr>
                             <?php endforeach; ?>
