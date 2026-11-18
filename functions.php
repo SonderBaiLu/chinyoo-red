@@ -978,7 +978,29 @@ function ew_cat_product_count( $term_id ) {
             $ids[] = (int) $k;
         }
     }
-    $in    = implode( ',', array_map( 'intval', $ids ) );
+    $in = implode( ',', array_map( 'intval', $ids ) );
+
+    // 分类归档页的主查询会被 Polylang 按「当前语言」过滤（language 分类法），
+    // 只列出当前语言下的产品。侧栏/页脚/移动端的大标题计数必须与之保持一致，
+    // 否则侧栏会显示整棵子树「全语言」的总数（如 104），而点进去只看到当前语言
+    // 的产品（如 52）。这里同样只统计当前语言的产品。
+    $lang_clause = '';
+    if ( function_exists( 'pll_current_language' ) ) {
+        $curlang = pll_current_language( \OBJECT );
+        if ( $curlang instanceof PLL_Language && ! empty( $curlang->term_id ) ) {
+            $lang_clause = $wpdb->prepare(
+                " AND EXISTS (
+                    SELECT 1 FROM {$wpdb->term_relationships} tr2
+                    JOIN {$wpdb->term_taxonomy} tt2 ON tt2.term_taxonomy_id = tr2.term_taxonomy_id
+                    WHERE tr2.object_id = p.ID
+                      AND tt2.taxonomy = 'language'
+                      AND tt2.term_id = %d
+                 )",
+                (int) $curlang->term_id
+            );
+        }
+    }
+
     $count = (int) $wpdb->get_var(
         "SELECT COUNT(DISTINCT p.ID)
            FROM {$wpdb->posts} p
@@ -987,7 +1009,8 @@ function ew_cat_product_count( $term_id ) {
           WHERE tt.taxonomy = 'product_cat'
             AND tt.term_id IN ({$in})
             AND p.post_type   = 'product'
-            AND p.post_status = 'publish'"
+            AND p.post_status = 'publish'
+           {$lang_clause}"
     );
     $cache[ $term_id ] = $count;
     return $count;
