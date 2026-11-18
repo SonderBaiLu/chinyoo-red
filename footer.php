@@ -5,21 +5,9 @@
  */
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-// Products 列：4 大顶级分类 + 子分类（按 EN slug 固定顺序，Polylang 语言感知）
-$ew_foot_cats_map = ew_cats_by_en_slug();
-$ew_foot_cat_order = array( 'voltage-testers', 'clamp-meters', 'others', 'digital-multimeters' );
-$ew_foot_cats = array();
-foreach ( $ew_foot_cat_order as $ew_slug ) {
-	if ( isset( $ew_foot_cats_map[ $ew_slug ] ) ) {
-		$ew_foot_cats[] = $ew_foot_cats_map[ $ew_slug ];
-	}
-}
-// 兜底：映射里没排到顺序的其他顶级分类也列出来（新增分类自动进页脚）
-foreach ( $ew_foot_cats_map as $ew_slug => $ew_cat ) {
-	if ( ! in_array( $ew_cat->term_id, wp_list_pluck( $ew_foot_cats, 'term_id' ), true ) ) {
-		$ew_foot_cats[] = $ew_cat;
-	}
-}
+// Products 列：4 大顶级分类（固定顺序，与侧栏/移动端一致）+ 子分类
+// 顶级顺序收敛到 ew_top_categories()；子分类逻辑（按产品数排序的扁平列表）保持页脚自身样式。
+$ew_foot_cats = ew_top_categories();
 
 // 子分类（当前语言，按产品数排序）
 $ew_foot_subcats = function ( $parent_id ) {

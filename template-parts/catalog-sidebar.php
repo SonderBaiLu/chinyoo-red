@@ -4,12 +4,8 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 $current = isset( $args['current_cat_id'] ) ? (int) $args['current_cat_id'] : 0;
 $overview = ! empty( $args['overview'] ) || is_page( 'product-categories' );
 $ancestors = $current ? array_map( 'intval', get_ancestors( $current, 'product_cat' ) ) : array();
-$categories = ew_cats_by_en_slug();
-$ordered = array();
-foreach ( array( 'voltage-testers', 'clamp-meters', 'others', 'digital-multimeters' ) as $slug ) {
-    if ( isset( $categories[ $slug ] ) ) { $ordered[ $slug ] = $categories[ $slug ]; }
-}
-$ordered += $categories;
+// 顶级主分类（固定顺序：测电笔→钳形表→其他→万用表）收敛到公共函数 ew_top_categories()，
+// 与移动端吸顶条(mobile-cat-strip)、页脚(footer) 共用，保证各处顺序一致。
 $render_children = function ( $parent ) use ( &$render_children, $current ) {
     $children = get_terms( array( 'taxonomy' => 'product_cat', 'parent' => $parent, 'hide_empty' => false, 'exclude' => ew_exclude_default_cat() ) );
     if ( is_wp_error( $children ) || ! $children ) { return; }
@@ -32,7 +28,7 @@ $render_children = function ( $parent ) use ( &$render_children, $current ) {
         $is_shop  = ( function_exists( 'is_shop' ) && is_shop() ) || is_post_type_archive( 'product' );
         ?>
         <a class="catalog-nav__all" href="<?php echo esc_url( $shop_url ); ?>"<?php echo $is_shop ? ' aria-current="page"' : ''; ?>><?php ew_esc_html_e( 'All Products' ); ?> <span class="catalog-nav__count"><?php echo (int) ew_total_product_count(); ?></span></a>
-        <?php foreach ( $ordered as $category ) :
+        <?php foreach ( ew_top_categories() as $category ) :
             $id = (int) $category->term_id;
             $url = get_term_link( $category );
             if ( is_wp_error( $url ) ) { continue; }

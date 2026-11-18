@@ -959,6 +959,33 @@ function ew_cats_by_en_slug() {
 }
 
 /**
+ * 顶级主分类列表（固定顺序：测电笔 → 钳形表 → 其他 → 万用表）。
+ * 分类翻译的 slug 带语言后缀（voltage-testers-pl 等），经 ew_cats_by_en_slug()
+ * 回映 EN slug 后再按固定顺序排，其余分类（若有新增）按默认顺序追加在后。
+ * 侧栏(catalog-sidebar)、移动端吸顶条(mobile-cat-strip)、页脚(footer) 共用，
+ * 保证各处分类顺序一致。结果按 term_id 静态缓存。
+ */
+function ew_top_categories() {
+    static $cache = null;
+    if ( null !== $cache ) {
+        return $cache;
+    }
+    $cache = array();
+    $map = ew_cats_by_en_slug();
+    foreach ( array( 'voltage-testers', 'clamp-meters', 'others', 'digital-multimeters' ) as $slug ) {
+        if ( isset( $map[ $slug ] ) ) {
+            $cache[ $map[ $slug ]->term_id ] = $map[ $slug ];
+        }
+    }
+    foreach ( $map as $cat ) {
+        if ( ! isset( $cache[ $cat->term_id ] ) ) {
+            $cache[ $cat->term_id ] = $cat;
+        }
+    }
+    return $cache;
+}
+
+/**
  * 分类产品总数（含全部子孙分类，DISTINCT 已发布产品）。
  * WP 的 term->count 只统计「直接」挂载到该分类的产品；顶级分类若产品挂在子分类下
  * （如 digital-multimeters → basic/professional），count 会错误显示 0。
