@@ -1308,8 +1308,9 @@ section {
 }
 
 .foot-count {
-    color: #7d8894;
+    color: var(--c-brand);
     font-size: var(--fs-xs);
+    font-weight: var(--fw-bold);
     margin-inline-start: 4px
 }
 
