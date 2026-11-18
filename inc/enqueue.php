@@ -188,6 +188,22 @@ function ew_enqueue_assets() {
         if ( ! $ew_tid ) { $ew_tid = $ew_thanks_id; }
         $ew_thanks_url = (string) get_permalink( $ew_tid );
     }
+    // --- 数据大盘：自建轻量行为统计（无 Cookie，只上报自家 admin-ajax） ---
+    // nonce 允许随缓存页过期（采集端点只记日志不硬拒，同询盘表单的处理）。
+    $v_an = ($t = filemtime( "$dir/assets/js/analytics.js" )) === false ? EW_THEME_VERSION : (string) $t;
+    wp_enqueue_script(
+        'ew-analytics',
+        EW_THEME_URI . '/assets/js/analytics.js',
+        array(),
+        $v_an,
+        true
+    );
+    wp_localize_script( 'ew-analytics', 'ewAnalytics', array(
+        'ajax_url' => admin_url( 'admin-ajax.php' ),
+        'nonce'    => wp_create_nonce( 'ew_analytics_nonce' ),
+        'country'  => ew_visitor_country_code(),
+    ) );
+
     wp_localize_script( 'ew-main-script', 'ew_ajax', array(
         'ajax_url' => admin_url( 'admin-ajax.php' ),
         'nonce'    => wp_create_nonce( 'ew_inquiry_nonce' ),

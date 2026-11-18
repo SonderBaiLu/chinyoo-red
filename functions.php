@@ -33,6 +33,8 @@ require_once EW_THEME_DIR . '/inc/scenarios.php';
 require_once EW_THEME_DIR . '/inc/scenario-content.php';
 require_once EW_THEME_DIR . '/inc/geo-faq.php'; // 产品页 FAQPage 数据 + 解析器(GEO)
 require_once EW_THEME_DIR . '/inc/product-guides.php'; // 产品页 → 指南文章 出链映射(发现通道)
+require_once EW_THEME_DIR . '/inc/analytics.php'; // 数据大盘：自建轻量行为统计（events 表 + 采集端点 + 聚合）
+require_once EW_THEME_DIR . '/inc/analytics-dashboard.php'; // 数据大盘：后台菜单页
 
 // --- Performance: Remove bloat ---
 remove_action('wp_head', 'print_emoji_detection_script', 7);
